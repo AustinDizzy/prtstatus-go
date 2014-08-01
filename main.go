@@ -42,12 +42,19 @@ type Config struct {
 	IsLive          bool
 }
 
-var config *Config
+var (
+	config  *Config
+	Session *mgo.Session
+)
 
 func init() {
 	c, err := ioutil.ReadFile("./config.json")
 	PanicErr(err)
 	err = json.Unmarshal(c, &config)
+
+	Session, err = mgo.Dial(config.MongoDB.ConnURL)
+	PanicErr(err)
+	Session.SetMode(mgo.Monotonic, true)
 }
 
 func main() {
@@ -99,11 +106,10 @@ func GetPRT() {
 	err = json.Unmarshal(body, &data)
 	PanicErr(err)
 
-	session, err := mgo.Dial(config.MongoDB.ConnURL)
-	PanicErr(err)
+	session := Session.Clone()
 	defer session.Close()
 
-	c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.UserCollection)
+	c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.StatusCollection)
 	existingStatus := PRTStatus{}
 	err = c.Find(nil).One(&existingStatus)
 	if data != existingStatus {
@@ -138,13 +144,12 @@ func AlertUsers(payload PRTStatus) {
 func GetAllUsers() []string {
 	var result []struct{ RegistrationID string }
 
-	session, err := mgo.Dial(config.MongoDB.ConnURL)
-	PanicErr(err)
+	session := Session.Clone()
 	defer session.Close()
 
 	c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.UserCollection)
 	iter := c.Find(nil).Iter()
-	err = iter.All(&result)
+	err := iter.All(&result)
 	PanicErr(err)
 
 	var finalResult []string
@@ -174,15 +179,14 @@ func RootHandler(respWriter http.ResponseWriter, request *http.Request) {
 
 func UserStore(regID string) bool {
 
-	session, err := mgo.Dial(config.MongoDB.ConnURL)
-	PanicErr(err)
+	session := Session.Clone()
 	defer session.Close()
 
 	currentTime := time.Now()
 
 	c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.UserCollection)
 	userExists := User{}
-	err = c.Find(bson.M{"registrationid": regID}).One(&userExists)
+	err := c.Find(bson.M{"registrationid": regID}).One(&userExists)
 	if err != nil {
 		err = c.Insert(&User{regID, currentTime})
 		PanicErr(err)
