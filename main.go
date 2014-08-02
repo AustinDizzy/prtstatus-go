@@ -10,6 +10,8 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"os"
+	"path/filepath"
 )
 
 type User struct {
@@ -48,7 +50,8 @@ var (
 )
 
 func init() {
-	c, err := ioutil.ReadFile("./config.json")
+	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	c, err := ioutil.ReadFile(dir + "/config.json")
 	PanicErr(err)
 	err = json.Unmarshal(c, &config)
 
