@@ -98,7 +98,10 @@ func PanicErr(err error) {
 func GetPRT() {
 	url := config.DataURL
 
-	res, err := http.Get(url)
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Cache-Control", "max-age=0")
+	res, err := client.Do(req)
 	PanicErr(err)
 
 	defer res.Body.Close()
