@@ -124,6 +124,8 @@ func GetPRT() {
 		PanicErr(err)
 		if config.IsLive {
 			go AlertUsers(data)
+		} else {
+			log.Println("AlertUsers(): ", data)
 		}
 	}
 }
