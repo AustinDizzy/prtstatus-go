@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"code.google.com/p/goauth2/oauth"
+	"code.google.com/p/google-api-go-client/mirror/v1"
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"gopkg.in/mgo.v2"
@@ -9,9 +11,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type User struct {
@@ -42,11 +44,23 @@ type Config struct {
 	}
 	RefreshInterval string
 	IsLive          bool
+	OAuthConfig     struct {
+		ClientId       string
+		ClientSecret   string
+		RedirectURL    string
+		ApprovalPrompt string
+		AccessType     string
+	}
 }
 
 var (
-	config  *Config
-	Session *mgo.Session
+	config      *Config
+	Session     *mgo.Session
+	oauthConfig = &oauth.Config{
+		Scope:    mirror.GlassTimelineScope,
+		AuthURL:  "https://accounts.google.com/o/oauth2/auth",
+		TokenURL: "https://accounts.google.com/o/oauth2/token",
+	}
 )
 
 func init() {
@@ -58,10 +72,17 @@ func init() {
 	Session, err = mgo.Dial(config.MongoDB.ConnURL)
 	PanicErr(err)
 	Session.SetMode(mgo.Monotonic, true)
+
+	oauthConfig.ClientId = config.OAuthConfig.ClientId
+	oauthConfig.ClientSecret = config.OAuthConfig.ClientSecret
+	oauthConfig.RedirectURL = config.OAuthConfig.RedirectURL
+	oauthConfig.ApprovalPrompt = config.OAuthConfig.ApprovalPrompt
+	oauthConfig.AccessType = config.OAuthConfig.AccessType
 }
 
 func main() {
 	log.Println("Starting server...")
+	log.Println("OAuth2 config:", oauthConfig)
 	duration, _ := time.ParseDuration(config.RefreshInterval)
 	ticker := time.NewTicker(duration)
 	quit := make(chan struct{})
@@ -81,9 +102,13 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/prt/_sandbox/", RootHandler).Methods("GET")
 	router.HandleFunc("/prt/_sandbox/user", UserHandler).Methods("POST")
+	router.HandleFunc("/prt/_sandbox/auth", AuthHandler).Methods("GET")
+	router.HandleFunc("/prt/_sandbox/store", CallbackHandler)
 
 	http.Handle("/prt/_sandbox/", router)
 	http.Handle("/prt/_sandbox/user", router)
+	http.Handle("/prt/_sandbox/auth", router)
+	http.Handle("/prt/_sandbox/store", router)
 
 	log.Println("Now listening on port", config.Port)
 	http.ListenAndServe(config.Port, nil)
@@ -166,6 +191,27 @@ func GetAllUsers() []string {
 		finalResult = append(finalResult, result[i].RegistrationID)
 	}
 	return finalResult
+}
+
+func AuthHandler(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, oauthConfig.AuthCodeURL(""), http.StatusFound)
+}
+
+func CallbackHandler(w http.ResponseWriter, r *http.Request) {
+	t := &oauth.Transport{Config: oauthConfig}
+	t.Exchange(r.FormValue("code"))
+	oauthHttpClient := t.Client()
+	log.Println("Got code:", r.FormValue("code"))
+
+	mirrorService, err := mirror.New(oauthHttpClient)
+	PanicErr(err)
+	card := &mirror.TimelineItem{
+		Id:        "prtstatus",
+		Text:      "PRT Status has been successfully enabled on your Google Glass device.",
+		MenuItems: []*mirror.MenuItem{&mirror.MenuItem{Action: "DELETE"}}, &mirror.MenuItem{Action: "TOGGLE_PINNED"},
+		Notification: &mirror.NotificationConfig{Level: "DEFAULT"},
+	}
+	mirrorService.Timeline.Insert(card).Do()
 }
 
 func UserHandler(respWriter http.ResponseWriter, request *http.Request) {
