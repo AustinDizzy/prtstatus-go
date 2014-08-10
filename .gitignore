@@ -1,5 +1,5 @@
 config.json
-main
+prtstatus
 log/
 pid/
 *.swp
