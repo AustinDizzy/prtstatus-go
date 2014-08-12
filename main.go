@@ -163,8 +163,8 @@ func AlertUsers(payload PRTStatus) {
 		Jar: nil,
 	}
 
-	users := GetAllUsers()
-	gcmWrapper := &GCMWrapper{RegistrationIDs: users, Payload: payload}
+	androids := GetAllUsers("android")
+	gcmWrapper := &GCMWrapper{RegistrationIDs: androids, Payload: payload}
 	gcmMessage, _ := json.Marshal(gcmWrapper)
 	req, _ := http.NewRequest("POST", url, bytes.NewReader(gcmMessage))
 	req.Header.Add("Authorization", "key="+config.GCMKey)
@@ -175,14 +175,14 @@ func AlertUsers(payload PRTStatus) {
 	}
 }
 
-func GetAllUsers() []string {
+func GetAllUsers(device string) []string {
 	var result []struct{ RegistrationID string }
 
 	session := Session.Clone()
 	defer session.Close()
 
 	c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.UserCollection)
-	iter := c.Find(nil).Iter()
+	iter := c.Find(bson.M{"userdevice": device}).Iter()
 	err := iter.All(&result)
 	PanicErr(err)
 
