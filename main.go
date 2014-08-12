@@ -204,7 +204,7 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	oauthHttpClient := t.Client()
 
 	if UserStore(r.FormValue("code"), "glass") {
-		w.Write([]byte("PRT Status has been successfully enabled on your Google Glass device.<br>You may now close this page."))
+		w.Write([]byte("PRT Status has been successfully enabled on your Google Glass device. You may now close this page."))
 	} else {
 		w.Write([]byte("ERROR: Your user may already exist in our database! If you keep experiencing this issue, please contact me at hi@austindizzy.me."))
 	}
@@ -219,21 +219,21 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	mirrorService.Timeline.Insert(card).Do()
 }
 
-func UserHandler(respWriter http.ResponseWriter, request *http.Request) {
-	respWriter.Header().Set("Content-Type", "application/json")
-	request.ParseForm()
+func UserHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	r.ParseForm()
 	body := make(map[string][]string)
-	body["regID"] = request.PostForm["regID"]
+	body["regID"] = r.PostForm["regID"]
 	if UserStore(body["regID"][0], "android") {
-		respWriter.Write([]byte("{\"success\": true}"))
+		w.Write([]byte("{\"success\": true}"))
 	} else {
-		respWriter.Write([]byte("{\"success\": false, \"message\": \"User already exists\"}"))
+		w.Write([]byte("{\"success\": false, \"message\": \"User already exists\"}"))
 	}
 }
 
-func RootHandler(respWriter http.ResponseWriter, request *http.Request) {
-	respWriter.Header().Set("Content-Type", "application/json")
-	respWriter.Write([]byte("{\"message\": \"PRT API Endpoint\", \"success\": true}"))
+func RootHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte("{\"message\": \"PRT API Endpoint\", \"success\": true}"))
 }
 
 func UserStore(regID string, device string) bool {
