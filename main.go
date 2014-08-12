@@ -18,6 +18,7 @@ import (
 
 type User struct {
 	RegistrationID   string
+	UserDevice       string
 	RegistrationDate time.Time
 }
 
@@ -201,14 +202,18 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	t := &oauth.Transport{Config: oauthConfig}
 	t.Exchange(r.FormValue("code"))
 	oauthHttpClient := t.Client()
-	log.Println("Got code:", r.FormValue("code"))
 
+	if UserStore(r.FormValue("code"), "glass") {
+		w.Write([]byte("PRT Status has been successfully enabled on your Google Glass device.<br>You may now close this page."))
+	} else {
+		w.Write([]byte("ERROR: Your user may already exist in our database! If you keep experiencing this issue, please contact me at hi@austindizzy.me."))
+	}
 	mirrorService, err := mirror.New(oauthHttpClient)
 	PanicErr(err)
 	card := &mirror.TimelineItem{
-		Id:        "prtstatus",
-		Text:      "PRT Status has been successfully enabled on your Google Glass device.",
-		MenuItems: []*mirror.MenuItem{&mirror.MenuItem{Action: "DELETE"}}, &mirror.MenuItem{Action: "TOGGLE_PINNED"},
+		Id:           "prtstatus",
+		Text:         "PRT Status has been successfully enabled on your Google Glass device.",
+		MenuItems:    []*mirror.MenuItem{&mirror.MenuItem{Action: "DELETE"}, &mirror.MenuItem{Action: "TOGGLE_PINNED"}, &mirror.MenuItem{Action: "READ_ALOUD"}},
 		Notification: &mirror.NotificationConfig{Level: "DEFAULT"},
 	}
 	mirrorService.Timeline.Insert(card).Do()
@@ -219,7 +224,7 @@ func UserHandler(respWriter http.ResponseWriter, request *http.Request) {
 	request.ParseForm()
 	body := make(map[string][]string)
 	body["regID"] = request.PostForm["regID"]
-	if UserStore(body["regID"][0]) {
+	if UserStore(body["regID"][0], "android") {
 		respWriter.Write([]byte("{\"success\": true}"))
 	} else {
 		respWriter.Write([]byte("{\"success\": false, \"message\": \"User already exists\"}"))
@@ -231,7 +236,7 @@ func RootHandler(respWriter http.ResponseWriter, request *http.Request) {
 	respWriter.Write([]byte("{\"message\": \"PRT API Endpoint\", \"success\": true}"))
 }
 
-func UserStore(regID string) bool {
+func UserStore(regID string, device string) bool {
 
 	session := Session.Clone()
 	defer session.Close()
@@ -242,7 +247,7 @@ func UserStore(regID string) bool {
 	userExists := User{}
 	err := c.Find(bson.M{"registrationid": regID}).One(&userExists)
 	if err != nil {
-		err = c.Insert(&User{regID, currentTime})
+		err = c.Insert(&User{regID, device, currentTime})
 		PanicErr(err)
 	} else {
 		return false
