@@ -17,7 +17,8 @@ import (
 )
 
 type User struct {
-	RegistrationID   string
+	RegistrationID   string       `json:"registrationID,omitempty"`
+	Tokens           *oauth.Token `json:"tokens,omitempty"`
 	UserDevice       string
 	RegistrationDate time.Time
 }
@@ -83,7 +84,6 @@ func init() {
 
 func main() {
 	log.Println("Starting server...")
-	log.Println("OAuth2 config:", oauthConfig)
 	duration, _ := time.ParseDuration(config.RefreshInterval)
 	ticker := time.NewTicker(duration)
 	quit := make(chan struct{})
@@ -163,7 +163,7 @@ func AlertUsers(payload PRTStatus) {
 		Jar: nil,
 	}
 
-	androids := GetAllUsers("android")
+	androids := GetAndroid()
 	gcmWrapper := &GCMWrapper{RegistrationIDs: androids, Payload: payload}
 	gcmMessage, _ := json.Marshal(gcmWrapper)
 	req, _ := http.NewRequest("POST", url, bytes.NewReader(gcmMessage))
@@ -173,16 +173,22 @@ func AlertUsers(payload PRTStatus) {
 	if resp.StatusCode != 200 {
 		log.Println("GCM Failed. Resp: ", resp.StatusCode)
 	}
+
+	var glass []*oauth.Token
+	glass = GetGlass()
+	for i := range glass {
+		SendCard(glass[i], payload.Message)
+	}
 }
 
-func GetAllUsers(device string) []string {
+func GetAndroid() []string {
 	var result []struct{ RegistrationID string }
 
 	session := Session.Clone()
 	defer session.Close()
 
 	c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.UserCollection)
-	iter := c.Find(bson.M{"userdevice": device}).Iter()
+	iter := c.Find(bson.M{"userdevice": "android"}).Iter()
 	err := iter.All(&result)
 	PanicErr(err)
 
@@ -194,25 +200,52 @@ func GetAllUsers(device string) []string {
 	return finalResult
 }
 
+func GetGlass() []*oauth.Token {
+	var result []struct{ Tokens oauth.Token }
+
+	session := Session.Clone()
+	defer session.Close()
+
+	c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.UserCollection)
+	iter := c.Find(bson.M{"userdevice": "glass"}).Iter()
+	err := iter.All(&result)
+	PanicErr(err)
+
+	var finalResult []*oauth.Token
+
+	for i := range result {
+		finalResult = append(finalResult, &result[i].Tokens)
+	}
+	return finalResult
+}
+
 func AuthHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, oauthConfig.AuthCodeURL(""), http.StatusFound)
 }
 
 func CallbackHandler(w http.ResponseWriter, r *http.Request) {
+
+	code := r.FormValue("code")
+
 	t := &oauth.Transport{Config: oauthConfig}
-	t.Exchange(r.FormValue("code"))
+	tokens, _ := t.Exchange(code)
+
+	if UserStore("", tokens, "glass") {
+		w.Write([]byte("PRT Status has been successfully enabled on your Google Glass device. We've sent a test message just to make sure. You may now close this page."))
+		SendCard(tokens, "PRT Status has been successfully enabled on your Google Glass device.")
+	} else {
+		w.Write([]byte("ERROR: Something seems to have gone wrong somewhere. If you keep experiencing this issue, please contact me at hi@austindizzy.me."))
+	}
+}
+
+func SendCard(tokens *oauth.Token, message string) {
+	t := &oauth.Transport{Token: tokens}
 	oauthHttpClient := t.Client()
 
-	if UserStore(r.FormValue("code"), "glass") {
-		w.Write([]byte("PRT Status has been successfully enabled on your Google Glass device. You may now close this page."))
-	} else {
-		w.Write([]byte("ERROR: Your user may already exist in our database! If you keep experiencing this issue, please contact me at hi@austindizzy.me."))
-	}
 	mirrorService, err := mirror.New(oauthHttpClient)
 	PanicErr(err)
 	card := &mirror.TimelineItem{
-		Id:           "prtstatus",
-		Text:         "PRT Status has been successfully enabled on your Google Glass device.",
+		Text:         message,
 		MenuItems:    []*mirror.MenuItem{&mirror.MenuItem{Action: "DELETE"}, &mirror.MenuItem{Action: "TOGGLE_PINNED"}, &mirror.MenuItem{Action: "READ_ALOUD"}},
 		Notification: &mirror.NotificationConfig{Level: "DEFAULT"},
 	}
@@ -221,11 +254,13 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 func UserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	log.Println("Incoming request")
 	r.ParseForm()
 	body := make(map[string][]string)
 	body["regID"] = r.PostForm["regID"]
-	if UserStore(body["regID"][0], "android") {
+	if UserStore(body["regID"][0], &oauth.Token{}, "android") {
 		w.Write([]byte("{\"success\": true}"))
+		log.Println("Added user")
 	} else {
 		w.Write([]byte("{\"success\": false, \"message\": \"User already exists\"}"))
 	}
@@ -236,18 +271,28 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("{\"message\": \"PRT API Endpoint\", \"success\": true}"))
 }
 
-func UserStore(regID string, device string) bool {
+func UserStore(regID string, tokens *oauth.Token, device string) bool {
 
 	session := Session.Clone()
 	defer session.Close()
-
-	currentTime := time.Now()
 
 	c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.UserCollection)
 	userExists := User{}
 	err := c.Find(bson.M{"registrationid": regID}).One(&userExists)
 	if err != nil {
-		err = c.Insert(&User{regID, device, currentTime})
+		if device == "android" {
+			err = c.Insert(&User{
+				RegistrationID:   regID,
+				UserDevice:       "android",
+				RegistrationDate: time.Now(),
+			})
+		} else {
+			err = c.Insert(&User{
+				Tokens:           tokens,
+				UserDevice:       "glass",
+				RegistrationDate: time.Now(),
+			})
+		}
 		PanicErr(err)
 	} else {
 		return false
