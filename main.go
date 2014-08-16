@@ -156,6 +156,30 @@ func GetPRT() {
 	}
 }
 
+func InitPush(user []string) {
+	url := "https://android.googleapis.com/gcm/send"
+
+	var payload PRTStatus
+	session := Session.Clone()
+	defer session.Close()
+
+	c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.StatusCollection)
+	c.Find(nil).One(&payload)
+
+	client := &http.Client{
+		Jar: nil,
+	}
+	gcmWrapper := &GCMWrapper{RegistrationIDs: user, Payload: payload}
+	gcmMessage, _ := json.Marshal(gcmWrapper)
+	req, _ := http.NewRequest("POST", url, bytes.NewReader(gcmMessage))
+	req.Header.Add("Authorization", "key="+config.GCMKey)
+	req.Header.Add("Content-Type", "application/json")
+	resp, _ := client.Do(req)
+	if resp.StatusCode != 200 {
+		log.Println("GCM Failed. Resp:", resp.StatusCode)
+	}
+}
+
 func AlertUsers(payload PRTStatus) {
 	url := "https://android.googleapis.com/gcm/send"
 
@@ -171,7 +195,7 @@ func AlertUsers(payload PRTStatus) {
 	req.Header.Add("Content-Type", "application/json")
 	resp, _ := client.Do(req)
 	if resp.StatusCode != 200 {
-		log.Println("GCM Failed. Resp: ", resp.StatusCode)
+		log.Println("GCM Failed. Resp:", resp.StatusCode)
 	}
 
 	var glass []*oauth.Token
@@ -261,6 +285,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	if UserStore(body["regID"][0], &oauth.Token{}, "android") {
 		w.Write([]byte("{\"success\": true}"))
 		log.Println("Added user")
+		go InitPush(body["regID"])
 	} else {
 		w.Write([]byte("{\"success\": false, \"message\": \"User already exists\"}"))
 	}
