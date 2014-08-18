@@ -117,7 +117,10 @@ func main() {
 
 func PanicErr(err error) {
 	if err != nil {
-		panic(err)
+		//panic(err)
+		//Don't panic until we work out a proper error handling solution.
+		//We don't want to crash the whole system again.
+		log.Println(err)
 	}
 }
 
