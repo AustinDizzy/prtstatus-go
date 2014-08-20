@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 )
 
@@ -296,7 +297,20 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 
 func RootHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte("{\"message\": \"PRT API Endpoint\", \"success\": true}"))
+	count := strconv.Itoa(UserCount())
+	w.Write([]byte("{\"message\": \"PRT API Endpoint\", \"users\": " + count + ", \"success\": true}"))
+}
+
+func UserCount() int {
+	session := Session.Clone()
+	defer session.Close()
+
+	c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.UserCollection)
+	count, err := c.Count()
+
+	PanicErr(err)
+
+	return count
 }
 
 func UserStore(regID string, tokens *oauth.Token, device string) bool {
