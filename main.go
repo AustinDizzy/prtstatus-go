@@ -135,28 +135,33 @@ func GetPRT() {
 	PanicErr(err)
 
 	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	PanicErr(err)
+	if err == nil {
 
-	var data PRTStatus
-	err = json.Unmarshal(body, &data)
-	PanicErr(err)
-
-	session := Session.Clone()
-	defer session.Close()
-
-	c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.StatusCollection)
-	existingStatus := PRTStatus{}
-	err = c.Find(nil).One(&existingStatus)
-	if data != existingStatus {
-		log.Println("PRT update at ", time.Now())
-		err = c.Update(nil, data)
+		body, err := ioutil.ReadAll(res.Body)
 		PanicErr(err)
-		if config.IsLive {
-			go AlertUsers(data)
-		} else {
-			log.Println("AlertUsers(): ", data)
+
+		var data PRTStatus
+		err = json.Unmarshal(body, &data)
+		PanicErr(err)
+
+		session := Session.Clone()
+		defer session.Close()
+
+		c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.StatusCollection)
+		existingStatus := PRTStatus{}
+		err = c.Find(nil).One(&existingStatus)
+		if data != existingStatus {
+			log.Println("PRT update at ", time.Now())
+			err = c.Update(nil, data)
+			PanicErr(err)
+			if config.IsLive {
+				go AlertUsers(data)
+			} else {
+				log.Println("AlertUsers(): ", data)
+			}
 		}
+	} else {
+		log.Println("Handled http.Client or http.Transport error.")
 	}
 }
 
