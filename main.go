@@ -134,8 +134,9 @@ func GetPRT() {
 	res, err := client.Do(req)
 	PanicErr(err)
 
-	defer res.Body.Close()
-	if err == nil {
+	if res != nil {
+
+		defer res.Body.Close()
 
 		body, err := ioutil.ReadAll(res.Body)
 		PanicErr(err)
