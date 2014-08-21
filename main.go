@@ -17,55 +17,6 @@ import (
 	"time"
 )
 
-type User struct {
-	RegistrationID   string       `json:"registrationID,omitempty"`
-	Tokens           *oauth.Token `json:"tokens,omitempty"`
-	UserDevice       string
-	RegistrationDate time.Time
-}
-
-type PRTStatus struct {
-	Status    string `json:"status"`
-	Message   string `json:"message"`
-	Timestamp string `json:"timestamp"`
-}
-
-type GCMWrapper struct {
-	RegistrationIDs []string  `json:"registration_ids"`
-	Payload         PRTStatus `json:"data"`
-}
-
-type Config struct {
-	GCMKey  string
-	Port    string
-	DataURL string
-	MongoDB struct {
-		ConnURL          string
-		RootDB           string
-		UserCollection   string
-		StatusCollection string
-	}
-	RefreshInterval string
-	IsLive          bool
-	OAuthConfig     struct {
-		ClientId       string
-		ClientSecret   string
-		RedirectURL    string
-		ApprovalPrompt string
-		AccessType     string
-	}
-}
-
-var (
-	config      *Config
-	Session     *mgo.Session
-	oauthConfig = &oauth.Config{
-		Scope:    mirror.GlassTimelineScope,
-		AuthURL:  "https://accounts.google.com/o/oauth2/auth",
-		TokenURL: "https://accounts.google.com/o/oauth2/token",
-	}
-)
-
 func init() {
 	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	c, err := ioutil.ReadFile(dir + "/config.json")
@@ -81,6 +32,7 @@ func init() {
 	oauthConfig.RedirectURL = config.OAuthConfig.RedirectURL
 	oauthConfig.ApprovalPrompt = config.OAuthConfig.ApprovalPrompt
 	oauthConfig.AccessType = config.OAuthConfig.AccessType
+	log.Println("Loaded config:", config)
 }
 
 func main() {
