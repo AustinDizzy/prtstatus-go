@@ -26,23 +26,23 @@ type GCMWrapper struct {
 }
 
 type Config struct {
-	GCMKey  string
-	Port    string
-	DataURL string
+	GCMKey  string `json:"GCMKey"`
+	Port    string `json:"Port"`
+	DataURL string `json:"DataURL"`
 	MongoDB struct {
-		ConnURL          string
-		RootDB           string
-		UserCollection   string
-		StatusCollection string
+		ConnURL          string `json:"ConnURL"`
+		RootDB           string `json:"RootDB"`
+		UserCollection   string `json:"UserCollection"`
+		StatusCollection string `json:"StatusCollection"`
 	}
-	RefreshInterval string
-	IsLive          bool
+	RefreshInterval string `json:"RefreshInterval"`
+	IsLive          bool   `json:"IsLive"`
 	OAuthConfig     struct {
-		ClientId       string
-		ClientSecret   string
-		RedirectURL    string
-		ApprovalPrompt string
-		AccessType     string
+		ClientId       string `json:"ClientId"`
+		ClientSecret   string `json:"ClientSecret"`
+		RedirectURL    string `json:"RedirectURL"`
+		ApprovalPrompt string `json:"ApprovalPrompt"`
+		AccessType     string `json:"AccessType"`
 	}
 }
 
