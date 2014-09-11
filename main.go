@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -32,7 +33,10 @@ func init() {
 	oauthConfig.RedirectURL = config.OAuthConfig.RedirectURL
 	oauthConfig.ApprovalPrompt = config.OAuthConfig.ApprovalPrompt
 	oauthConfig.AccessType = config.OAuthConfig.AccessType
-	log.Println("Loaded config:", config)
+	if config.DataURL == "" {
+		config.DataURL = "https://prtstatus.wvu.edu/api/{TIMESTAMP}/?format=json"
+	}
+	log.Println("Config loaded:", config)
 }
 
 func main() {
@@ -78,7 +82,8 @@ func PanicErr(err error) {
 }
 
 func GetPRT() {
-	url := config.DataURL
+	t := strconv.FormatInt(time.Now().Unix(), 10)
+	url := strings.Replace(config.DataURL, "{TIMESTAMP}", t, 1)
 
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", url, nil)
