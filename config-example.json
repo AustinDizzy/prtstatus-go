@@ -9,5 +9,12 @@
 		"StatusCollection": "prt-status"
 	},
 	"RefreshInterval": "5s",
-	"IsLive": false
+	"IsLive": false,
+	"OAuthConfig": {
+		"ClientId": "clientid.apps.googleusercontent.com",
+		"ClientSecret": "SuperSecretGeneratedHash",
+		"RedirectURL": "https://example.com/prt/users",
+		"ApprovalPrompt": "force",
+		"AccessType": "offline"
+	}
 }
