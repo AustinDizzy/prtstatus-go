@@ -33,9 +33,6 @@ func init() {
 	oauthConfig.RedirectURL = config.OAuthConfig.RedirectURL
 	oauthConfig.ApprovalPrompt = config.OAuthConfig.ApprovalPrompt
 	oauthConfig.AccessType = config.OAuthConfig.AccessType
-	if config.DataURL == "" {
-		config.DataURL = "https://prtstatus.wvu.edu/api/{TIMESTAMP}/?format=json"
-	}
 	log.Println("Config loaded:", config)
 }
 
@@ -82,8 +79,15 @@ func PanicErr(err error) {
 }
 
 func GetPRT() {
-	t := strconv.FormatInt(time.Now().Unix(), 10)
-	url := strings.Replace(config.DataURL, "{TIMESTAMP}", t, 1)
+
+	var url string
+
+	if strings.Contains(config.DataURL, "{TIMESTAMP}") {
+		t := strconv.FormatInt(time.Now().Unix(), 10)
+		url = strings.Replace(config.DataURL, "{TIMESTAMP}", t, 1)
+	} else {
+		url = config.DataURL
+	}
 
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", url, nil)
