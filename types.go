@@ -25,6 +25,20 @@ type GCMWrapper struct {
 	Payload         PRTStatus `json:"data"`
 }
 
+type GCMResult struct {
+	MulticastID  int64 `json:"multicast_id"`
+	Success      int   `json:"success"`
+	Failure      int   `json:"failure"`
+	CanonicalIDs int   `json:"canonical_ids"`
+	Results      []GCMInnerResults
+}
+
+type GCMInnerResults struct {
+	MessageID      string `json:"message_id"`
+	RegistrationID string `json:"registration_id"`
+	Error          string `json:"error"`
+}
+
 type Config struct {
 	GCMKey  string `json:"GCMKey"`
 	Port    string `json:"Port"`
