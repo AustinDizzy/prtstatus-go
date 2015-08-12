@@ -1,10 +1,11 @@
 package main
 
 import (
+	"time"
+
 	"code.google.com/p/goauth2/oauth"
 	"code.google.com/p/google-api-go-client/mirror/v1"
-	"gopkg.in/mgo.v2"
-	"time"
+	"gopkg.in/pg.v3"
 )
 
 type User struct {
@@ -15,9 +16,14 @@ type User struct {
 }
 
 type PRTStatus struct {
-	Status    string `json:"status"`
-	Message   string `json:"message"`
-	Timestamp string `json:"timestamp"`
+	ID               int
+	Status           string   `json:"status"`
+	Message          string   `json:"message"`
+	Timestamp        string   `json:"timestamp"`
+	Stations         []string `json:"stations"`
+	BussesDispatched string   `json:"bussesDispatched"`
+	bussesBool       bool
+	data             string
 }
 
 type GCMWrapper struct {
@@ -27,42 +33,41 @@ type GCMWrapper struct {
 
 type GCMResult struct {
 	MulticastID  int64 `json:"multicast_id"`
-	Success      int   `json:"success"`
-	Failure      int   `json:"failure"`
-	CanonicalIDs int   `json:"canonical_ids"`
+	Success      int
+	Failure      int
+	CanonicalIDs int `json:"canonical_ids"`
 	Results      []GCMInnerResults
 }
 
 type GCMInnerResults struct {
 	MessageID      string `json:"message_id"`
 	RegistrationID string `json:"registration_id"`
-	Error          string `json:"error"`
+	Error          string
 }
 
 type Config struct {
-	GCMKey  string `json:"GCMKey"`
-	Port    string `json:"Port"`
-	DataURL string `json:"DataURL"`
-	MongoDB struct {
-		ConnURL          string `json:"ConnURL"`
-		RootDB           string `json:"RootDB"`
-		UserCollection   string `json:"UserCollection"`
-		StatusCollection string `json:"StatusCollection"`
+	GCMKey   string
+	Port     string
+	DataURL  string
+	Postgres struct {
+		User string
+		DB   string
 	}
-	RefreshInterval string `json:"RefreshInterval"`
-	IsLive          bool   `json:"IsLive"`
+	RefreshInterval string
+	IsLive          bool
 	OAuthConfig     struct {
-		ClientId       string `json:"ClientId"`
-		ClientSecret   string `json:"ClientSecret"`
-		RedirectURL    string `json:"RedirectURL"`
-		ApprovalPrompt string `json:"ApprovalPrompt"`
-		AccessType     string `json:"AccessType"`
+		ClientId       string
+		ClientSecret   string
+		RedirectURL    string
+		ApprovalPrompt string
+		AccessType     string
 	}
+	Debug bool
 }
 
 var (
 	config      *Config
-	Session     *mgo.Session
+	DB          *pg.DB
 	oauthConfig = &oauth.Config{
 		Scope:    mirror.GlassTimelineScope,
 		AuthURL:  "https://accounts.google.com/o/oauth2/auth",

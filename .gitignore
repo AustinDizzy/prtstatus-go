@@ -3,3 +3,4 @@ prtstatus
 log/
 pid/
 *.swp
+*.exe
