@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"log"
@@ -12,8 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"code.google.com/p/goauth2/oauth"
 	"github.com/gorilla/mux"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 	"google.golang.org/api/mirror/v1"
 	"gopkg.in/pg.v3"
 )
@@ -22,23 +22,31 @@ func init() {
 	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	c, err := ioutil.ReadFile(dir + "/config.json")
 	err = json.Unmarshal(c, &config)
-	LogErr(err, "config reading")
+
+	if err != nil {
+		log.Printf("Error loading config file: %v\n", err)
+	} else {
+		log.Printf("Loaded config: %#v\n", config)
+	}
 
 	DB = pg.Connect(&pg.Options{
 		User:     config.Postgres.User,
 		Database: config.Postgres.DB,
 	})
 
-	oauthConfig.ClientId = config.OAuthConfig.ClientId
-	oauthConfig.ClientSecret = config.OAuthConfig.ClientSecret
-	oauthConfig.RedirectURL = config.OAuthConfig.RedirectURL
-	oauthConfig.ApprovalPrompt = config.OAuthConfig.ApprovalPrompt
-	oauthConfig.AccessType = config.OAuthConfig.AccessType
+	oauthConfig = &oauth2.Config{
+		ClientID:     config.OAuthConfig.ClientId,
+		ClientSecret: config.OAuthConfig.ClientSecret,
+		Endpoint:     google.Endpoint,
+		Scopes:       []string{mirror.GlassTimelineScope},
+	}
 }
 
 func LogErr(err error, args ...interface{}) {
-	if config.Debug && cap(args) > 0 {
-		log.Printf("", args)
+	if config.Debug && len(args) > 0 {
+		for i := range args {
+			log.Printf("%#v", args[i])
+		}
 	}
 	if err != nil {
 		log.Println(err)
@@ -110,26 +118,24 @@ func GetPRT() {
 
 		var data, lastStatus PRTStatus
 		err = json.Unmarshal(body, &data)
-		_, err = DB.QueryOne(&lastStatus, `
-	    SELECT * FROM updates ORDER BY id DESC LIMIT 1
-		`)
+		_, err = DB.QueryOne(&lastStatus, `SELECT * FROM updates ORDER BY id DESC LIMIT 1`)
 
 		if !compare(data, lastStatus) {
-			log.Println("PRT update at ", time.Now())
-
-			data.bussesBool = data.BussesDispatched != "0"
+			log.Println("PRT update at", time.Now())
 
 			_, err = DB.QueryOne(&data, `
 					INSERT INTO updates (status, message, timestamp, stations, bussesDispatched, data)
 					VALUES (?, ?, ?, ?, ?, ?)
 					RETURNING id
-			`, data.Status, data.Message, data.Timestamp, data.Stations, data.bussesBool, string(body))
+			`, data.Status, data.Message, data.Timestamp, data.getStations(), data.bussesRunning(), string(body))
 
 			LogErr(err, "inserting data")
 
 			if config.IsLive {
-				//go AlertUsers(data)
-				log.Println("users would be alerted")
+				users, err := getUsers("android")
+				LogErr(err, "getting users ", len(users))
+				err = sendToUser(&data, users...)
+				LogErr(err, "send update to", len(users), "users")
 			} else {
 				log.Println("AlertUsers(): ", data)
 			}
@@ -140,206 +146,16 @@ func GetPRT() {
 	}
 }
 
-func InitPush(user []string) {
-	url := "https://android.googleapis.com/gcm/send"
-
-	payload := PRTStatus{}
-	_, err := DB.QueryOne(&payload, `
-		SELECT * FROM updates ORDER BY id DESC LIMIT 1
-	`)
-
-	log.Printf("InitPush err: %v", err)
-
-	client := &http.Client{
-		Jar: nil,
-	}
-	gcmWrapper := &GCMWrapper{RegistrationIDs: user, Payload: payload}
-	gcmMessage, _ := json.Marshal(gcmWrapper)
-	req, _ := http.NewRequest("POST", url, bytes.NewReader(gcmMessage))
-	req.Header.Add("Authorization", "key="+config.GCMKey)
-	req.Header.Add("Content-Type", "application/json")
-	resp, _ := client.Do(req)
-	if resp.StatusCode != 200 {
-		log.Println("GCM Failed. Resp:", resp.StatusCode)
-	}
-}
-
-func AlertUsers(payload PRTStatus) {
-
-	url := "https://android.googleapis.com/gcm/send"
-
-	client := &http.Client{
-		Jar: nil,
-	}
-
-	androids := GetAndroid()
-	gcmWrapper := &GCMWrapper{RegistrationIDs: androids, Payload: payload}
-	gcmMessage, _ := json.Marshal(gcmWrapper)
-	req, _ := http.NewRequest("POST", url, bytes.NewReader(gcmMessage))
-	req.Header.Add("Authorization", "key="+config.GCMKey)
-	req.Header.Add("Content-Type", "application/json")
-	resp, _ := client.Do(req)
-	if resp.StatusCode != 200 {
-		log.Println("GCM Failed. Resp:", resp.StatusCode)
-	} else {
-		body, err := ioutil.ReadAll(resp.Body)
-
-		log.Println("GCM Results:", string(body))
-
-		var response GCMResult
-		err = json.Unmarshal(body, &response)
-
-		if err == nil {
-
-			log.Println("There are", len(androids), "Androids and", len(response.Results), "results.")
-			log.Println("There are", response.Success, "successful messages,", response.Failure, "failures, and", response.CanonicalIDs, "canonical IDs.")
-			mappedResults := make(map[string]GCMInnerResults)
-			for i, v := range androids {
-				mappedResults[v] = response.Results[i]
-			}
-
-			notRegisteredCount := 0
-			canonicalIdCount := 0
-
-			for i, v := range mappedResults {
-				if v.Error == "NotRegistered" {
-					notRegisteredCount++
-					go DeleteUser(i)
-				}
-
-				if len(v.RegistrationID) > 0 {
-					canonicalIdCount++
-					go UpdateUser(i, v.RegistrationID)
-				}
-			}
-
-			log.Println("There are", notRegisteredCount, " NotRegistered and", canonicalIdCount, " Canonical ID updates after result mapping.")
-		}
-	}
-
-	var glass []*oauth.Token
-	glass = GetGlass()
-	for i := range glass {
-		SendCard(glass[i], payload.Message)
-	}
-}
-
-func UpdateUser(oldId string, newId string) {
-
-	log.Printf("UpdateUser: %v -> %v\n", oldId, newId)
-	// c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.UserCollection)
-	// err := c.Update(bson.M{"registrationid": oldId}, bson.M{"$set": bson.M{"registrationid": newId}})
-	//
-	// PanicErr(err)
-	// if err == nil {
-	// 	log.Println("User", oldId, "was updated to user", newId, "successfully.")
-	// }
-}
-
-func DeleteUser(userId string) {
-
-	log.Printf("DeleteUser: %v\n", userId)
-	// session := Session.Clone()
-	// defer session.Close()
-	//
-	// c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.UserCollection)
-	// err := c.Remove(bson.M{"registrationid": userId})
-	//
-	// PanicErr(err)
-	// if err == nil {
-	// 	log.Println("User", userId, "unregistered and was deleted.")
-	// }
-}
-
-func GetAndroid() []string {
-	var result []struct{ RegistrationID string }
-
-	// session := Session.Clone()
-	// defer session.Close()
-	//
-	// c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.UserCollection)
-	// iter := c.Find(bson.M{"userdevice": "android"}).Iter()
-	// err := iter.All(&result)
-	// PanicErr(err)
-	//
-	var finalResult []string
-
-	for i := range result {
-		finalResult = append(finalResult, result[i].RegistrationID)
-	}
-	return finalResult
-}
-
-func GetGlass() []*oauth.Token {
-	var result []struct{ Tokens oauth.Token }
-
-	// session := Session.Clone()
-	// defer session.Close()
-	//
-	// c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.UserCollection)
-	// iter := c.Find(bson.M{"userdevice": "glass"}).Iter()
-	// err := iter.All(&result)
-	// PanicErr(err)
-
-	var finalResult []*oauth.Token
-
-	for i := range result {
-		finalResult = append(finalResult, &result[i].Tokens)
-	}
-	return finalResult
-}
-
-func SendCard(tokens *oauth.Token, message string) {
-	t := &oauth.Transport{Token: tokens}
-	oauthHttpClient := t.Client()
-
-	mirrorService, err := mirror.New(oauthHttpClient)
-	LogErr(err, "sending Glass card")
-	card := &mirror.TimelineItem{
-		Text:         message,
-		MenuItems:    []*mirror.MenuItem{&mirror.MenuItem{Action: "DELETE"}, &mirror.MenuItem{Action: "TOGGLE_PINNED"}, &mirror.MenuItem{Action: "READ_ALOUD"}},
-		Notification: &mirror.NotificationConfig{Level: "DEFAULT"},
-	}
-	mirrorService.Timeline.Insert(card).Do()
-}
-
-func UserCount() int {
-	// session := Session.Clone()
-	// defer session.Close()
-	//
-	// c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.UserCollection)
-	// count, err := c.Count()
-
-	// return count
-	return 1
-}
-
-func UserStore(regID string, tokens *oauth.Token, device string) bool {
-
-	// session := Session.Clone()
-	// defer session.Close()
-	//
-	// c := session.DB(config.MongoDB.RootDB).C(config.MongoDB.UserCollection)
-	// userExists := User{}
-	// err := c.Find(bson.M{"registrationid": regID}).One(&userExists)
-	// if err != nil {
-	// 	if device == "android" {
-	// 		err = c.Insert(&User{
-	// 			RegistrationID:   regID,
-	// 			UserDevice:       "android",
-	// 			RegistrationDate: time.Now(),
-	// 		})
-	// 	} else {
-	// 		err = c.Insert(&User{
-	// 			Tokens:           tokens,
-	// 			UserDevice:       "glass",
-	// 			RegistrationDate: time.Now(),
-	// 		})
-	// 	}
-	// 	PanicErr(err)
-	// } else {
-	// 	return false
-	// }
-
-	return true
-}
+//func SendCard(tokens *oauth.Token, message string) {
+//	t := &oauth.Transport{Token: tokens}
+//	oauthHttpClient := t.Client()
+//
+//	mirrorService, err := mirror.New(oauthHttpClient)
+//	LogErr(err, "sending Glass card")
+//	card := &mirror.TimelineItem{
+//		Text:         message,
+//		MenuItems:    []*mirror.MenuItem{&mirror.MenuItem{Action: "DELETE"}, &mirror.MenuItem{Action: "TOGGLE_PINNED"}, &mirror.MenuItem{Action: "READ_ALOUD"}},
+//		Notification: &mirror.NotificationConfig{Level: "DEFAULT"},
+//	}
+//	mirrorService.Timeline.Insert(card).Do()
+//}

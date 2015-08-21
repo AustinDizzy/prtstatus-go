@@ -3,46 +3,69 @@ package main
 import (
 	"time"
 
-	"code.google.com/p/goauth2/oauth"
-	"code.google.com/p/google-api-go-client/mirror/v1"
+	"golang.org/x/oauth2"
 	"gopkg.in/pg.v3"
 )
 
 type User struct {
-	RegistrationID   string       `json:"registrationID,omitempty"`
-	Tokens           *oauth.Token `json:"tokens,omitempty"`
-	UserDevice       string
+	RegistrationId   string
+	Tokens           *oauth2.Token
+	Device           string
 	RegistrationDate time.Time
 }
 
+type Users struct {
+	C []User
+}
+
+var _ pg.Collection = &Users{}
+
+func (users *Users) NewRecord() interface{} {
+	users.C = append(users.C, User{})
+	return &users.C[len(users.C)-1]
+}
+
+type UserIDs struct {
+	C []string
+}
+
+func (userIDs *UserIDs) NewRecord() interface{} {
+	userIDs.C = append(userIDs.C, "")
+	return &userIDs.C[len(userIDs.C)-1]
+}
+
 type PRTStatus struct {
-	ID               int
-	Status           string   `json:"status"`
-	Message          string   `json:"message"`
-	Timestamp        string   `json:"timestamp"`
-	Stations         []string `json:"stations"`
-	BussesDispatched string   `json:"bussesDispatched"`
-	bussesBool       bool
-	data             string
+	Id        int    `structs:"-"`
+	Status    string `structs:"status"`
+	Message   string `structs:"message"`
+	Timestamp string `structs:"timestamp"`
+	Stations  []struct {
+		Id   int
+		Name string
+	} `structs:"stations"`
+	BussesDispatched string `structs:"bussesDispatched"`
+	data             string `structs:"-"`
 }
 
-type GCMWrapper struct {
-	RegistrationIDs []string  `json:"registration_ids"`
-	Payload         PRTStatus `json:"data"`
+func (p *PRTStatus) getStations() []string {
+	s := []string{}
+	for i := range p.Stations {
+		s = append(s, p.Stations[i].Name)
+	}
+	return s
 }
 
-type GCMResult struct {
-	MulticastID  int64 `json:"multicast_id"`
-	Success      int
-	Failure      int
-	CanonicalIDs int `json:"canonical_ids"`
-	Results      []GCMInnerResults
+func (p *PRTStatus) bussesRunning() bool {
+	return (p.BussesDispatched != "0")
 }
 
-type GCMInnerResults struct {
-	MessageID      string `json:"message_id"`
-	RegistrationID string `json:"registration_id"`
-	Error          string
+type Statuses struct {
+	C []PRTStatus
+}
+
+func (statuses *Statuses) NewRecord() interface{} {
+	statuses.C = append(statuses.C, PRTStatus{})
+	return &statuses.C[len(statuses.C)-1]
 }
 
 type Config struct {
@@ -68,9 +91,5 @@ type Config struct {
 var (
 	config      *Config
 	DB          *pg.DB
-	oauthConfig = &oauth.Config{
-		Scope:    mirror.GlassTimelineScope,
-		AuthURL:  "https://accounts.google.com/o/oauth2/auth",
-		TokenURL: "https://accounts.google.com/o/oauth2/token",
-	}
+	oauthConfig *oauth2.Config
 )
