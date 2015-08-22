@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -43,6 +44,11 @@ func init() {
 }
 
 func LogErr(err error, args ...interface{}) {
+	pc := make([]uintptr, 10)
+	runtime.Callers(2, pc)
+	f := runtime.FuncForPC(pc[0])
+	log.Printf("RUNNING %s", f.Name())
+
 	if config.Debug && len(args) > 0 {
 		for i := range args {
 			log.Printf("%#v", args[i])
