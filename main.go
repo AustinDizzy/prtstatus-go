@@ -89,14 +89,7 @@ func main() {
 	http.Handle("/prt/_sandbox/store", router)
 
 	log.Println("Now listening on port", config.Port)
-	http.ListenAndServe(config.Port, nil)
-}
-
-func compare(a, b PRTStatus) bool {
-	LogErr(nil, "comparing", a, b)
-	return (a.Status == b.Status &&
-		a.Message == b.Message &&
-		a.Timestamp == b.Timestamp)
+	http.ListenAndServe(config.Port, router)
 }
 
 func GetPRT() {
@@ -122,20 +115,15 @@ func GetPRT() {
 
 		body, err := ioutil.ReadAll(res.Body)
 
-		var data, lastStatus PRTStatus
+		var data PRTStatus
 		err = json.Unmarshal(body, &data)
-		_, err = DB.QueryOne(&lastStatus, `SELECT * FROM updates ORDER BY id DESC LIMIT 1`)
+		LogErr(err, "parsing data")
 
-		if !compare(data, lastStatus) {
+		lastStatus, err := getLastData()
+
+		if !data.compare(lastStatus) {
 			log.Println("PRT update at", time.Now())
-
-			_, err = DB.QueryOne(&data, `
-					INSERT INTO updates (status, message, timestamp, stations, bussesDispatched, data)
-					VALUES (?, ?, ?, ?, ?, ?)
-					RETURNING id
-			`, data.Status, data.Message, data.Timestamp, data.getStations(), data.bussesRunning(), string(body))
-
-			LogErr(err, "inserting data")
+			storeData(&data)
 
 			if config.IsLive {
 				users, err := getUsers("android")

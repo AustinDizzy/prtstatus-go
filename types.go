@@ -20,52 +20,22 @@ type Users struct {
 
 var _ pg.Collection = &Users{}
 
-func (users *Users) NewRecord() interface{} {
-	users.C = append(users.C, User{})
-	return &users.C[len(users.C)-1]
-}
-
-type UserIDs struct {
-	C []string
-}
-
-func (userIDs *UserIDs) NewRecord() interface{} {
-	userIDs.C = append(userIDs.C, "")
-	return &userIDs.C[len(userIDs.C)-1]
-}
-
 type PRTStatus struct {
-	Id        int    `structs:"-"`
-	Status    string `structs:"status"`
-	Message   string `structs:"message"`
-	Timestamp string `structs:"timestamp"`
-	Stations  []struct {
+	Id           int    `structs:"-"`
+	Status       string `structs:"status"`
+	Message      string `structs:"message"`
+	Timestamp    string `structs:"timestamp"`
+	stationsData []struct {
 		Id   int
 		Name string
-	} `structs:"stations"`
-	BussesDispatched string `structs:"bussesDispatched"`
-	data             string `structs:"-"`
+	} `json:"stations" structs:"stations" pg:"-"`
+	Stations            []string `sql:"stations" pg:"stations" structs:"-"`
+	BussesDispatched    bool     `structs:"bussesDispatched" json:"bussesDispatchedBool"`
+	bussesDispatchedStr string   `json:"bussesDispatched"`
 }
 
-func (p *PRTStatus) getStations() []string {
-	s := []string{}
-	for i := range p.Stations {
-		s = append(s, p.Stations[i].Name)
-	}
-	return s
-}
-
-func (p *PRTStatus) bussesRunning() bool {
-	return (p.BussesDispatched != "0")
-}
-
-type Statuses struct {
+type Updates struct {
 	C []PRTStatus
-}
-
-func (statuses *Statuses) NewRecord() interface{} {
-	statuses.C = append(statuses.C, PRTStatus{})
-	return &statuses.C[len(statuses.C)-1]
 }
 
 type Config struct {
