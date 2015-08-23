@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>WVU PRT Status</title>
+        
+        <link rel="shortcut icon" href="./favicon.ico" type="image/x-icon">
+        <link rel="icon" href="./favicon.ico" type="image/x-icon">
+
+        <link href="//netdna.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+        <link href='//fonts.googleapis.com/css?family=Open+Sans:400,300' rel='stylesheet' type='text/css'>
+        <link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.css" rel="stylesheet">
+        <link href='css/stylesheet.css' rel='stylesheet' type='text/css'>
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+        <script type="text/javascript">
+            $(document).ready(function() {
+                $('.carousel').carousel({
+                    interval: 8000,
+                    pause: "hover"
+                });
+                $('.btn-git').click(function(){
+                    ga('send', 'event', 'button', 'click', 'GitHub');
+                });
+                $('#surveyForm').click(function(){
+                    ga('send', 'event', 'button', 'click', 'Survey');
+                });
+                $('#androidButton').click(function(){
+                    ga('send', 'event', 'button', 'click', 'Android');
+                });
+                $('#glassbutton').click(function(){
+                    ga('send', 'event', 'button', 'click', 'Glass');
+                });
+            });
+        </script>
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    
+    <body>
+        <article>
+            <header>
+                <div class="jumbotron text-center">
+                    <div class="container">
+                        <h1>WVU PRT Status</h1>
+                        <p>proud to provide to <a href="https://www.wvu.edu"><img src="img/wvu-white.png" height="28px"></a></p>
+                        <p style="font-size:75%">Currently available on <a href="#android" style="color:#A4C739">Android</a>&#0153; and <a href="#glass" style="color:lightgrey">Google Glass</a>&#0153;</p>
+                    </div>
+                </div>
+            </header>
+
+            <section>
+                <!-- News featured section -->
+                <div class="container text-center">
+                    <h3>As featured on 
+                        <a href="http://wvutoday.wvu.edu/n/2014/08/15/student-employee-develops-wvu-prt-status-app-to-alert-riders-about-service" target="_blank">
+                            <span style="color:#00447c;font-weight:bold;">WVU</span><span style="color:#eeb111;">Today</span>
+                        </a>
+                        and
+                        <a href="http://www.thedaonline.com/news/article_c3405ca8-281b-11e4-8f1d-001a4bcf6878.html" target="_blank">The Daily Athenaeum</a>.
+                    </h3>
+                </div>
+            </section>
+
+            <hr>
+
+            <section>
+                <!-- Android section -->
+                <div class="container" id="android">
+                    <div class="row">
+                        <div class="col-md-6 text-center">
+                            <h3 class="text-center">on <span style="color:#A4C639;display:inline-block"><i class="fa fa-android"></i>Android</span></h3>
+                            <ul class="text-justify">
+                                <li>Get automatically notified <s>if</s> when the PRT goes down unexpectedly.</li>
+                                <li>Know about delays or closings before it's ever announced at the stations.</li>
+                                <li>Fully compatible with Android Wear (e.g. Moto 360, LG G Watch, Samsung Gear Live, etc.) and Pebble.</li>
+                            </ul>
+                            <hr>
+                            <span class="row text-center">
+                                <span class="col-md-6 col-sm-6 col-xs-12" style="margin-bottom:15px">
+                                    <a class="btn btn-default btn-git" href="https://github.com/AustinDizzy/prtstatus-android">
+                                        <i class="fa fa-github fa-2x pull-left"></i> View source on GitHub
+                                    </a>
+                                </span>
+                                <span class="col-md-6 col-sm-6 col-xs-12">
+                                    <a href="https://play.google.com/store/apps/details?id=me.austindizzy.wvuprtstatus.app" id="androidButton">
+                                        <img alt="Get it on Google Play" src="https://developer.android.com/images/brand/en_generic_rgb_wo_60.png" />
+                                    </a>
+                                </span>
+                            </span>
+                        </div>
+                        <div class="col-md-6 text-center">
+                            <img src="https://raw.githubusercontent.com/AustinDizzy/prtstatus-android/master/artwork/prt_promotion.png" style="max-width:100%;max-height:420px;">
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <hr>
+
+            <section>
+                <!-- Glass section -->
+                <div class="container" id="glass">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div id="carousel-example-generic" class="carousel slide">
+                            <ol class="carousel-indicators">
+                                <li data-target="#carousel-example-generic" data-slide-to="0" class="active"></li>
+                                <li data-target="#carousel-example-generic" data-slide-to="1"></li>
+                                <li data-target="#carousel-example-generic" data-slide-to="2"></li>
+                            </ol>
+                            <div class="carousel-inner">
+                                <div class="item active">
+                                    <img src="img/prt-alert.png" alt="">
+                                    <div class="carousel-caption"></div>
+                                </div>
+                                <div class="item">
+                                    <img src="img/prt-down.png" alt="">
+                                    <div class="carousel-caption"></div>
+                                </div>
+                                <div class="item">
+                                    <img src="img/prt-open.png" alt="">
+                                    <div class="carousel-caption"></div>
+                                </div>
+                            </div>
+                            <a class="left carousel-control" href="#carousel-example-generic" data-slide="prev">
+                                <span class="icon-prev"></span>
+                            </a>
+                            <a class="right carousel-control" href="#carousel-example-generic" data-slide="next">
+                                <span class="icon-next"></span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                    <h3 style="font-family:'aruallight'" class="text-center">on GLASS</h3>
+                        <ul>
+                            <li>Get real-time notifications on the status of WVU's PRT system pushed right to your Google Glass timeline.</li>
+                            <li>Get a <i>heads up</i> on the PRT; terrible pun intended.</li>
+                            <li>Don't be late for work or your next class. Plan the route to your next destination ahead of time, accounting for any unexpected PRT delays or closings.</li>
+                        </ul>
+                        <hr>
+                        <span class="row text-center">
+                            <span class="col-md-6 col-sm-6 col-xs-12" style="margin-bottom:15px">
+                                <a class="btn btn-default btn-git" href="https://github.com/AustinDizzy/prtstatus-go">
+                                    <i class="fa fa-github fa-2x pull-left"></i> View source on GitHub
+                                </a>
+                            </span>
+                            <span class="col-md-6 col-sm-6 col-xs-12">
+                                <a href="javascript:alert('Due to a low Glass usership, I\'ve temporarily disabled Glass updates. Please contact me if you have interests in getting PRT Status updates on your Google Glass device.')" id="glassbutton">
+                                    <img src="img/getitonglass.png" />
+                                    <img src="img/getitonglass_hover.png" style="display:none;"/>
+                                </a>
+                            </span>
+                        </span>
+                    </div>
+                </div>
+            </section>
+            <hr>
+            <section>
+                <!-- Contact/Other section -->
+                <div class="container">
+                    <div class="row">
+                        <span class="col-md-12 text-center">  
+                            <h2>Other Devices</h2>
+                        </span>
+                    </div>
+                    <div class="row">
+                        <span class="col-md-12 text-center">
+                            Don't have a device currently supported? Please answer <a href="https://docs.google.com/forms/d/179GSm0bcXPoYISj3VOPHoE82iFbP2cJkgrx7LOc52BQ/viewform" target="_blank" style="font-weight:bold">this survey</a> so I can work on getting a supported version for you.
+                        </span>
+                    </div>
+                    <div class="row">
+                        <span class="col-md-12 text-center">
+                            <h3 style="display: inline-block;">Contact:</h3>
+                            <!--Email obfuscation provided by http://rot13.florianbersier.com/ -->
+                            <script>
+                                document.write("<n uers=\"znvygb:uv@nhfgvaqvmml.zr\" ery=\"absbyybj\">uv@nhfgvaqvmml.zr</n>".replace(/[a-zA-Z]/g,
+                                function(c){return String.fromCharCode((c<="Z"?90:122)>=(c=c.charCodeAt(0)+13)?c:c-26);}));
+                            </script>
+                            or <a href="https://twitter.com/AustinDizzy" target="_blank">@AustinDizzy</a>
+                        </span>
+                    </div>
+                </div>
+            </section>
+        </article>
+
+        <footer>
+            <!-- Blue & Old Gold stripes -->
+            <span class="col-md-3 col-xs-3"></span><span class="col-md-3 col-xs-3"></span><span class="col-md-3 col-xs-3"></span><span class="col-md-3 col-xs-3"></span>
+            <div class="container">
+                <span>Made by the hands of a proud Mountaineer, in Morgantown, WV.</span>
+                <span><a href="http://austindizzy.me" style="color:inherit;">2014 &copy; Austin Dizzy</a></span>
+                <span><span style="font-family:'aruallight';display:inline-block;">GLASS</span> "Glass" is a trademark of Google Inc.</span>
+            </div>
+        </footer>
+
+        <script src="//netdna.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+        <script src="//austindizzy.me/js/ga.js"></script>
+    </body>
+</html>

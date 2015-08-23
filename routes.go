@@ -11,12 +11,6 @@ import (
 	"time"
 )
 
-func RootHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	count := strconv.Itoa(userCount())
-	w.Write([]byte("{\"message\": \"PRT API Endpoint\", \"users\": " + count + ", \"success\": true}"))
-}
-
 func UserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	log.Println("Incoming request")

@@ -78,12 +78,12 @@ func main() {
 	}()
 
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/", RootHandler).Methods("GET")
 	router.HandleFunc("/user", UserHandler).Methods("POST")
 	router.HandleFunc("/auth", AuthHandler).Methods("GET")
 	router.HandleFunc("/store", CallbackHandler)
 	router.HandleFunc("/api/", ApiRootRedirect)
 	router.HandleFunc("/api/{action}", ApiHandler)
+	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./static")))
 
 	log.Println("Now listening on port", config.Port)
 	http.ListenAndServe(config.Port, router)
