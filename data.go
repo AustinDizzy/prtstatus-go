@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"time"
 )
 
@@ -29,16 +30,31 @@ func getLastData() (PRTStatus, error) {
 	return lastStatus, err
 }
 
-func getData(n time.Duration) ([]PRTStatus, error) {
-	var updates Updates
-	now := time.Now()
-	begin := now.Add(-n)
+func getData(n ...time.Duration) ([]PRTStatus, error) {
+	var (
+		updates    Updates
+		start, end time.Time
+		now        = time.Now()
+	)
+	if len(n) == 2 {
+		start = now.Add(-n[0])
+		end = now.Add(-n[1])
+	} else if len(n) == 1 {
+		start = now
+		end = now.Add(-n[0])
+	} else if len(n) == 0 {
+		return nil, errors.New("No time bound(s) supplied.")
+	}
+
+	if !start.After(end) {
+		start, end = end, start
+	}
 
 	_, err := DB.Query(&updates, `
 		SELECT * FROM updates WHERE timestamp BETWEEN ?::bigint AND ?::bigint
-	`, begin.Format("1136239445"), now.Format("1136239445"))
+	`, end.Unix(), start.Unix())
 
-	LogErr(err, "getting data from", begin, "to", now)
+	LogErr(err, "getting data from "+end.Format(time.RFC822)+" to "+start.Format(time.RFC822))
 	return updates.C, err
 }
 

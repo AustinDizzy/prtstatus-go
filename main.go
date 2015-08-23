@@ -77,16 +77,13 @@ func main() {
 		}
 	}()
 
-	router := mux.NewRouter()
-	router.HandleFunc("/prt/_sandbox/", RootHandler).Methods("GET")
-	router.HandleFunc("/prt/_sandbox/user", UserHandler).Methods("POST")
-	router.HandleFunc("/prt/_sandbox/auth", AuthHandler).Methods("GET")
-	router.HandleFunc("/prt/_sandbox/store", CallbackHandler)
-
-	http.Handle("/prt/_sandbox/", router)
-	http.Handle("/prt/_sandbox/user", router)
-	http.Handle("/prt/_sandbox/auth", router)
-	http.Handle("/prt/_sandbox/store", router)
+	router := mux.NewRouter().StrictSlash(true)
+	router.HandleFunc("/", RootHandler).Methods("GET")
+	router.HandleFunc("/user", UserHandler).Methods("POST")
+	router.HandleFunc("/auth", AuthHandler).Methods("GET")
+	router.HandleFunc("/store", CallbackHandler)
+	router.HandleFunc("/api/", ApiRootRedirect)
+	router.HandleFunc("/api/{action}", ApiHandler)
 
 	log.Println("Now listening on port", config.Port)
 	http.ListenAndServe(config.Port, router)

@@ -21,17 +21,17 @@ type Users struct {
 var _ pg.Collection = &Users{}
 
 type PRTStatus struct {
-	Id           int    `structs:"-"`
+	Id           int    `structs:"id"`
 	Status       string `structs:"status"`
 	Message      string `structs:"message"`
 	Timestamp    string `structs:"timestamp"`
 	stationsData []struct {
 		Id   int
 		Name string
-	} `json:"stations" structs:"stations" pg:"-"`
-	Stations            []string `sql:"stations" pg:"stations" structs:"-"`
+	} `json:"stations" structs:"-" pg:"-"`
+	Stations            []string `sql:"stations" pg:"stations" structs:"-" structs :"stations"`
 	BussesDispatched    bool     `structs:"bussesDispatched" json:"bussesDispatchedBool"`
-	bussesDispatchedStr string   `json:"bussesDispatched"`
+	bussesDispatchedStr string   `json:"bussesDispatched" structs:"-"`
 }
 
 type Updates struct {

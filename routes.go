@@ -1,9 +1,14 @@
 package main
 
 import (
+	"encoding/json"
+	"github.com/fatih/structs"
+	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 )
 
 func RootHandler(w http.ResponseWriter, r *http.Request) {
@@ -33,6 +38,55 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 
 func AuthHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, oauthConfig.AuthCodeURL(""), http.StatusFound)
+}
+
+func ApiRootRedirect(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/api/info", http.StatusFound)
+}
+
+func ApiHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	w.Header().Set("Content-Type", "application/json")
+	data := map[string]interface{}{}
+
+	if config.Debug {
+		data["route"] = vars["action"]
+	}
+
+router:
+	switch vars["action"] {
+	case "info":
+		data["message"] = "PRT Status endpoint. Read more here: https://github.com/AustinDizzy/prtstatus-go"
+		data["users"] = userCount()
+		data["success"] = true
+	case "data":
+		d := []time.Duration{}
+		for _, v := range strings.Split(r.FormValue("range"), "...") {
+			bound, err := time.ParseDuration(v)
+			if err != nil {
+				data["success"] = false
+				data["message"] = "The supplied range is in an incorrect format."
+				break router
+			}
+			d = append(d, bound)
+		}
+		updates, err := getData(d...)
+		if err != nil {
+			data["success"] = false
+			data["message"] = err.Error
+		}
+
+		results := make([]map[string]interface{}, len(updates))
+		for i, s := range updates {
+			results[i] = structs.New(s).Map()
+		}
+		data["results"] = results
+		data["success"] = true
+	default:
+		data["message"] = "This route does not exist."
+		data["success"] = false
+	}
+	json.NewEncoder(w).Encode(data)
 }
 
 func CallbackHandler(w http.ResponseWriter, r *http.Request) {
