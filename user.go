@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/gob"
 	"github.com/alexjlockwood/gcm"
 	"github.com/fatih/structs"
 	"time"
@@ -12,15 +10,11 @@ func storeUser(user *User) error {
 	if user.RegistrationDate.IsZero() {
 		user.RegistrationDate = time.Now()
 	}
-	t := bytes.Buffer{}
-	enc := gob.NewEncoder(&t)
-	err := enc.Encode(user.Tokens)
-	LogErr(err, "storing user")
 
-	_, err = DB.QueryOne(&user, `
-		INSERT INTO users (registration_id, tokens, device, registration_date)
-		VALUES (?::text, ?, ?::text, ?::timestamp with time zone)
-	`, user.RegistrationId, t, user.Device, user.RegistrationDate)
+	_, err := DB.QueryOne(&user, `
+		INSERT INTO users (registration_id, device, registration_date)
+		VALUES (?::text, ?::text, ?::timestamp with time zone)
+	`, user.RegistrationId, user.Device, user.RegistrationDate)
 	LogErr(err, "inserting user")
 
 	return err
