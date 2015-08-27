@@ -19,8 +19,10 @@ import (
 	"gopkg.in/pg.v3"
 )
 
+var dir string
+
 func init() {
-	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	dir, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 	c, err := ioutil.ReadFile(dir + "/config.json")
 	err = json.Unmarshal(c, &config)
 
@@ -88,10 +90,10 @@ func main() {
 	router.HandleFunc("/api", ApiRoot)
 	router.HandleFunc("/api/", ApiRoot)
 	router.HandleFunc("/api/{action}", ApiHandler)
-	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./static")))
+	router.PathPrefix("/").Handler(http.FileServer(http.Dir(dir + "/static")))
 
-	log.Println("Now listening on port", config.Port)
-	http.ListenAndServe(config.Port, router)
+	log.Println("Now listening on port", config.Port, "serving from", dir+"/static")
+	http.ListenAndServe(config.Port, LoggingMiddleware(router))
 }
 
 func GetPRT() {

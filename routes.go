@@ -10,6 +10,13 @@ import (
 	"time"
 )
 
+func LoggingMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println(r.Method, r.URL)
+		h.ServeHTTP(w, r)
+	})
+}
+
 func UserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	log.Println("Incoming request")
