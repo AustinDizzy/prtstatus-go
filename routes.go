@@ -6,7 +6,6 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -34,8 +33,14 @@ func AuthHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, oauthConfig.AuthCodeURL(""), http.StatusFound)
 }
 
-func ApiRootRedirect(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/api/info", http.StatusFound)
+func ApiRoot(w http.ResponseWriter, r *http.Request) {
+	data := map[string]interface{}{
+		"message": "PRT Status endpoint. Read more here: https://github.com/AustinDizzy/prtstatus-su",
+		"users":   userCount(),
+		"success": true,
+	}
+	json.NewEncoder(w).Encode(data)
+
 }
 
 func ApiHandler(w http.ResponseWriter, r *http.Request) {
@@ -49,10 +54,6 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 
 router:
 	switch vars["action"] {
-	case "info":
-		data["message"] = "PRT Status endpoint. Read more here: https://github.com/AustinDizzy/prtstatus-go"
-		data["users"] = userCount()
-		data["success"] = true
 	case "data":
 		d := []time.Duration{}
 		for _, v := range strings.Split(r.FormValue("range"), "...") {

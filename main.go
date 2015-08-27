@@ -47,11 +47,15 @@ func LogErr(err error, args ...interface{}) {
 	pc := make([]uintptr, 10)
 	runtime.Callers(2, pc)
 	f := runtime.FuncForPC(pc[0])
-	log.Printf("RUNNING %s", f.Name())
 
-	if config.Debug && len(args) > 0 {
-		for i := range args {
-			log.Printf("%#v", args[i])
+	if config.Debug {
+
+		log.Printf("RUNNING %s", f.Name())
+
+		if len(args) > 0 {
+			for i := range args {
+				log.Printf("%#v", args[i])
+			}
 		}
 	}
 	if err != nil {
@@ -77,11 +81,12 @@ func main() {
 		}
 	}()
 
-	router := mux.NewRouter().StrictSlash(true)
+	router := mux.NewRouter()
 	router.HandleFunc("/user", UserHandler).Methods("POST")
 	router.HandleFunc("/auth", AuthHandler).Methods("GET")
 	router.HandleFunc("/store", CallbackHandler)
-	router.HandleFunc("/api/", ApiRootRedirect)
+	router.HandleFunc("/api", ApiRoot)
+	router.HandleFunc("/api/", ApiRoot)
 	router.HandleFunc("/api/{action}", ApiHandler)
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./static")))
 
