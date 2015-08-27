@@ -1,20 +1,19 @@
 {
-	"GCMKey": "TEST_KEY",
-	"Port": ":8080",
-	"DataURL": "http://prtstatus.sitespace.wvu.edu/cache.php?json=true",
-	"MongoDB": {
-		"ConnURL": "localhost",
-		"RootDB": "prt-android",
-		"UserCollection": "users",
-		"StatusCollection": "prt-status"
+	"gcmKey": "<key>",
+	"port": ":8000",
+	"dataURL": "https://prtstatus.wvu.edu/api/{TIMESTAMP}?format=json",
+	"postgres": {
+		"user": "prtuser",
+		"db": "prtupdates"
 	},
-	"RefreshInterval": "5s",
-	"IsLive": false,
-	"OAuthConfig": {
-		"ClientId": "clientid.apps.googleusercontent.com",
-		"ClientSecret": "SuperSecretGeneratedHash",
-		"RedirectURL": "https://example.com/prt/users",
-		"ApprovalPrompt": "force",
-		"AccessType": "offline"
-	}
+	"refreshInterval": "15s",
+	"isLive": false,
+	"oAuthConfig": {
+		"clientId": "null",
+		"clientSecret": "null",
+		"redirectURL": "null",
+		"approvalPrompt": "force",
+		"accessType": "offline"
+	},
+	"debug": false
 }
