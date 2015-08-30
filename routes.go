@@ -41,8 +41,9 @@ func AuthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ApiRoot(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	data := map[string]interface{}{
-		"message": "PRT Status endpoint. Read more here: https://github.com/AustinDizzy/prtstatus-su",
+		"message": "PRT Status endpoint. Read more here: https://github.com/AustinDizzy/prtstatus-go",
 		"users":   userCount(),
 		"success": true,
 	}
@@ -53,6 +54,7 @@ func ApiRoot(w http.ResponseWriter, r *http.Request) {
 func ApiHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	data := map[string]interface{}{}
 
 	if config.Debug {
