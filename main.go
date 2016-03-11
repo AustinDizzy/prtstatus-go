@@ -1,81 +1,44 @@
 package main
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"os"
-	"path/filepath"
+	"github.com/spf13/viper"
+	"gopkg.in/macaron.v1"
+	"gopkg.in/pg.v4"
+	logpkg "log"
 	"runtime"
-	"strconv"
-	"strings"
 	"time"
-
-	"github.com/gorilla/mux"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
-	"google.golang.org/api/mirror/v1"
-	"gopkg.in/pg.v3"
 )
 
-var dir string
+var (
+	DB       *pg.DB
+	duration time.Duration
+)
 
 func init() {
-	dir, _ = filepath.Abs(filepath.Dir(os.Args[0]))
-	c, err := ioutil.ReadFile(dir + "/config.json")
-	err = json.Unmarshal(c, &config)
-
-	if err != nil {
-		log.Printf("Error loading config file: %v\n", err)
-	} else {
-		log.Printf("Loaded config: %#v\n", config)
-	}
-
-	DB = pg.Connect(&pg.Options{
-		User:     config.Postgres.User,
-		Database: config.Postgres.DB,
-	})
-
-	oauthConfig = &oauth2.Config{
-		ClientID:     config.OAuthConfig.ClientId,
-		ClientSecret: config.OAuthConfig.ClientSecret,
-		Endpoint:     google.Endpoint,
-		Scopes:       []string{mirror.GlassTimelineScope},
-	}
-}
-
-func LogErr(err error, args ...interface{}) {
-	pc := make([]uintptr, 10)
-	runtime.Callers(2, pc)
-	f := runtime.FuncForPC(pc[0])
-
-	if config.Debug {
-
-		log.Printf("RUNNING %s", f.Name())
-
-		if len(args) > 0 {
-			for i := range args {
-				log.Printf("%#v", args[i])
-			}
-		}
-	}
-	if err != nil {
-		log.Println(err)
-	}
+	viper.SetConfigName("config")
+	viper.AddConfigPath(".")
+	viper.SetDefault("refreshInterval", "15s")
+	viper.SetDefault("port", ":8000")
+	log(viper.ReadInConfig())
 }
 
 func main() {
-	log.Println("Starting server...")
-	duration, _ := time.ParseDuration(config.RefreshInterval)
-	ticker := time.NewTicker(duration)
-	quit := make(chan struct{})
+	logpkg.Println("Starting server...")
+	duration, _ = time.ParseDuration(viper.GetString("refreshInterval"))
+
+	var (
+		ticker = time.NewTicker(duration)
+		quit   = make(chan struct{})
+		m      = macaron.Classic()
+	)
+
+	initDatabase(viper.GetString("postgres.user"), viper.GetString("postgres.db"))
 
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
-				go GetPRT()
+				go poll()
 			case <-quit:
 				ticker.Stop()
 				return
@@ -83,77 +46,36 @@ func main() {
 		}
 	}()
 
-	router := mux.NewRouter()
-	router.HandleFunc("/user", UserHandler).Methods("POST")
-	router.HandleFunc("/auth", AuthHandler).Methods("GET")
-	router.HandleFunc("/store", CallbackHandler)
-	router.HandleFunc("/api", ApiRoot)
-	router.HandleFunc("/api/", ApiRoot)
-	router.HandleFunc("/api/{action}", ApiHandler)
-	router.PathPrefix("/").Handler(http.FileServer(http.Dir(dir + "/static")))
-
-	log.Println("Now listening on port", config.Port, "serving from", dir+"/static")
-	http.ListenAndServe(config.Port, LoggingMiddleware(router))
+	m.Post("/user", APIMiddleware(userHandler))
+	m.Get("/api/data", APIMiddleware(dataAPI))
+	m.Use(macaron.Static("static"))
+	// router.HandleFunc("/auth", AuthHandler).Methods("GET")
+	// router.HandleFunc("/store", CallbackHandler)
+	// router.HandleFunc("/api", ApiRoot)
+	// router.HandleFunc("/api/", ApiRoot)
+	m.Run(viper.GetInt("port"))
 }
 
-func GetPRT() {
+func log(err error, args ...interface{}) {
+	pc := make([]uintptr, 10)
+	runtime.Callers(2, pc)
+	f := runtime.FuncForPC(pc[0])
 
-	var url string
+	if viper.GetBool("debug") {
 
-	if strings.Contains(config.DataURL, "{TIMESTAMP}") {
-		t := strconv.FormatInt(time.Now().Unix(), 10)
-		url = strings.Replace(config.DataURL, "{TIMESTAMP}", t, 1)
-	} else {
-		url = config.DataURL
-	}
-
-	client := &http.Client{}
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("Cache-Control", "max-age=0")
-	res, err := client.Do(req)
-	LogErr(err, "making request")
-
-	if res != nil {
-
-		defer res.Body.Close()
-
-		body, err := ioutil.ReadAll(res.Body)
-
-		var data PRTStatus
-		err = json.Unmarshal(body, &data)
-		LogErr(err, "parsing data")
-
-		lastStatus, err := getLastData()
-
-		if !data.compare(lastStatus) {
-			log.Println("PRT update at", time.Now())
-			storeData(&data)
-
-			if config.IsLive {
-				users, err := getUsers("android")
-				LogErr(err, "getting users ", len(users))
-				err = sendToUser(&data, users...)
-				LogErr(err, "send update to", len(users), "users")
-			} else {
-				log.Println("AlertUsers(): ", data)
-			}
+		if err != nil {
+			panic(err)
 		}
 
-	} else {
-		log.Println("Handled http.Client or http.Transport error.")
+		logpkg.Printf("RUNNING %s", f.Name())
+
+		if len(args) > 0 {
+			for i := range args {
+				logpkg.Printf("%#v", args[i])
+			}
+		}
+	}
+	if err != nil {
+		logpkg.Println(err)
 	}
 }
-
-//func SendCard(tokens *oauth.Token, message string) {
-//	t := &oauth.Transport{Token: tokens}
-//	oauthHttpClient := t.Client()
-//
-//	mirrorService, err := mirror.New(oauthHttpClient)
-//	LogErr(err, "sending Glass card")
-//	card := &mirror.TimelineItem{
-//		Text:         message,
-//		MenuItems:    []*mirror.MenuItem{&mirror.MenuItem{Action: "DELETE"}, &mirror.MenuItem{Action: "TOGGLE_PINNED"}, &mirror.MenuItem{Action: "READ_ALOUD"}},
-//		Notification: &mirror.NotificationConfig{Level: "DEFAULT"},
-//	}
-//	mirrorService.Timeline.Insert(card).Do()
-//}

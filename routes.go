@@ -1,109 +1,79 @@
 package main
 
 import (
-	"encoding/json"
-	"github.com/fatih/structs"
-	"github.com/gorilla/mux"
-	"log"
+	"fmt"
+	"github.com/austindizzy/prtstatus-go/prt"
 	"net/http"
-	"strings"
+	"strconv"
 	"time"
 )
 
-func LoggingMiddleware(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Println(r.Method, r.URL)
-		h.ServeHTTP(w, r)
-	})
-}
+type Response map[string]interface{}
 
-func UserHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	log.Println("Incoming request")
-	r.ParseForm()
-	user := User{
-		RegistrationId: r.PostForm["regID"][0],
-		Device:         "android",
-	}
-	if err := storeUser(&user); err != nil {
-		w.Write([]byte("{\"success\": false, \"message\": \"User already exists\"}"))
-	} else {
-		w.Write([]byte("{\"success\": true}"))
-		var data PRTStatus
-		_, err := DB.QueryOne(&data, `SELECT * FROM updates ORDER BY id DESC LIMIT 1`)
-		LogErr(err, "get last update")
-		sendToUser(&data, user)
-	}
-}
+func userHandler(r *http.Request) Response {
+	var (
+		user = NewUser(r.PostFormValue("regID"), "android")
+		n    int
+		err  error
+	)
 
-func AuthHandler(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, oauthConfig.AuthCodeURL(""), http.StatusFound)
-}
+	_, err = DB.QueryOne(&n, `SELECT count(*)::int FROM users WHERE key = ?`, user.Key)
+	log(err)
 
-func ApiRoot(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	data := map[string]interface{}{
-		"message": "PRT Status endpoint. Read more here: https://github.com/AustinDizzy/prtstatus-go",
-		"users":   userCount(),
-		"success": true,
-	}
-	json.NewEncoder(w).Encode(data)
-
-}
-
-func ApiHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	data := map[string]interface{}{}
-
-	if config.Debug {
-		data["route"] = vars["action"]
+	if n != 0 {
+		return Response{"success": false, "message": "User already exists."}
 	}
 
-router:
-	switch vars["action"] {
-	case "data":
-		d := []time.Duration{}
-		for _, v := range strings.Split(r.FormValue("range"), "...") {
-			bound, err := time.ParseDuration(v)
-			if err != nil {
-				data["success"] = false
-				data["message"] = "The supplied range is in an incorrect format."
-				break router
-			}
-			d = append(d, bound)
-		}
-		updates, err := getData(d...)
+	log(storeUser(user), "Saving New User")
+
+	status, err := getLastStatus()
+	log(err)
+
+	log(user.send(&status))
+
+	return Response{"success": true}
+}
+
+func dataAPI(r *http.Request) Response {
+	var (
+		err       error
+		params    []interface{}
+		statuses  []prt.Status
+		timeframe = [2]time.Time{time.Time{}, time.Now()}
+		q         = `SELECT status, message, timestamp, stations, busses_dispatched, duration FROM updates`
+	)
+	const errMsg = "Parameter '%s' is not formatted correctly."
+
+	for i, c := range []string{"from", "to"} {
+		timestamp, err := strconv.ParseInt(r.URL.Query().Get(c), 10, 64)
 		if err != nil {
-			data["success"] = false
-			data["message"] = err.Error
+			return Response{"success": false, "message": fmt.Sprintf(errMsg, c)}
 		}
-
-		results := make([]map[string]interface{}, len(updates))
-		for i, s := range updates {
-			results[i] = structs.New(s).Map()
-		}
-		data["results"] = results
-		data["success"] = true
-	default:
-		data["message"] = "This route does not exist."
-		data["success"] = false
+		timeframe[i] = time.Unix(timestamp, 0)
 	}
-	json.NewEncoder(w).Encode(data)
+
+	params = append(params, timeframe[0], timeframe[1])
+
+	if r.URL.Query().Get("limit") != "" {
+		limit, err := strconv.ParseUint(r.URL.Query().Get("limit"), 0, 64)
+		if err != nil {
+			return Response{"success": false, "message": fmt.Sprintf(errMsg, "limit")}
+		}
+		q += ` LIMIT ?`
+		params = append(params, limit)
+	}
+
+	q += ` WHERE timetstamp between ? AND ?`
+	_, err = DB.Query(&statuses, q, params...)
+	return Response{"success": err == nil, "results": &statuses}
 }
 
-func CallbackHandler(w http.ResponseWriter, r *http.Request) {
-
-	code := r.FormValue("code")
-	LogErr(nil, "glass callback", code)
-	//t := &oauth.Transport{Config: oauthConfig}
-	//tokens, _ := t.Exchange(code)
-	//
-	//if UserStore("", tokens, "glass") {
-	//	w.Write([]byte("PRT Status has been successfully enabled on your Google Glass device. We've sent a test message just to make sure. You may now close this page."))
-	//	SendCard(tokens, "PRT Status has been successfully enabled on your Google Glass device.")
-	//} else {
-	w.Write([]byte("ERROR: Something seems to have gone wrong somewhere. If you keep experiencing this issue, please contact me at hi@austindizzy.me."))
-	//}
+func APIMiddleware(h func(r *http.Request) Response) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		if r.Method == "POST" {
+			log(r.ParseForm())
+		}
+		fmt.Fprint(w, h(r))
+	})
 }

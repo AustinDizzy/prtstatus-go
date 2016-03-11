@@ -1,87 +1,42 @@
 package main
 
 import (
-	"errors"
-	"time"
+	"github.com/austindizzy/prtstatus-go/prt"
+	"gopkg.in/pg.v4"
 )
 
-func storeData(d *PRTStatus) error {
-	r, err := DB.QueryOne(d, `
-		INSERT INTO updates (status, message, timestamp, stations, busses_dispatched)
-		VALUES (?::integer, ?::text, ?::bigint, ?, ?::boolean)
-		RETURNING id
-	`, d.Status, d.Message, d.Timestamp, d.getStations(), d.bussesRunning())
-	if r != nil && r.Affected() == 0 {
-		LogErr(err, "storing data", &d)
-	} else {
-		LogErr(err)
-	}
+func initDatabase(user, database string) {
+	DB = pg.Connect(&pg.Options{
+		User:     user,
+		Database: database,
+	})
+}
+
+var statusColumns = []string{"status", "message", "timestamp", "stations", "busses_dispatched", "duration"}
+
+func saveStatus(d *prt.Status) error {
+	_, err := DB.Exec(`
+        INSERT INTO updates (status, message, timestamp, stations, busses_dispatched, duration)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `, d.Status, d.Message, d.Timestamp, d.Stations, d.BussesDispatched, d.Duration)
 	return err
 }
 
-func getLastData() (PRTStatus, error) {
-	lastStatus := PRTStatus{}
-	_, err := DB.QueryOne(&lastStatus, `
-		SELECT id, status, message, timestamp, stations, busses_dispatched
-		FROM updates
-		ORDER BY id DESC LIMIT 1
-	`)
-	LogErr(err, "getting last update", lastStatus)
-	return lastStatus, err
-}
-
-func getData(n ...time.Duration) ([]PRTStatus, error) {
+func getLastStatus() (prt.Status, error) {
 	var (
-		updates    Updates
-		start, end time.Time
-		now        = time.Now()
+		lastStatus prt.Status
+		err        error
+		q          = `
+            SELECT status, message, timestamp, stations, busses_dispatched, duration
+            FROM updates 
+            ORDER BY id DESC 
+            LIMIT 1
+        `
 	)
-	if len(n) == 2 {
-		start = now.Add(-n[0])
-		end = now.Add(-n[1])
-	} else if len(n) == 1 {
-		start = now
-		end = now.Add(-n[0])
-	} else if len(n) == 0 {
-		return nil, errors.New("No time bound(s) supplied.")
+
+	_, err = DB.QueryOne(&lastStatus, q)
+	if err == pg.ErrNoRows {
+		err = nil
 	}
-
-	if !start.After(end) {
-		start, end = end, start
-	}
-
-	_, err := DB.Query(&updates, `
-		SELECT * FROM updates WHERE timestamp BETWEEN ?::bigint AND ?::bigint
-	`, end.Unix(), start.Unix())
-
-	LogErr(err, "getting data from "+end.Format(time.RFC822)+" to "+start.Format(time.RFC822))
-	return updates.C, err
-}
-
-func (users *Users) NewRecord() interface{} {
-	users.C = append(users.C, User{})
-	return &users.C[len(users.C)-1]
-}
-
-func (p *PRTStatus) getStations() []string {
-	s := []string{}
-	for i := range p.stationsData {
-		s = append(s, p.stationsData[i].Name)
-	}
-	return s
-}
-
-func (p *PRTStatus) bussesRunning() bool {
-	return (p.bussesDispatchedStr != "0")
-}
-
-func (a *PRTStatus) compare(b PRTStatus) bool {
-	return (a.Status == b.Status &&
-		a.Message == b.Message &&
-		a.Timestamp == b.Timestamp)
-}
-
-func (updates *Updates) NewRecord() interface{} {
-	updates.C = append(updates.C, PRTStatus{})
-	return &updates.C[len(updates.C)-1]
+	return lastStatus, err
 }
