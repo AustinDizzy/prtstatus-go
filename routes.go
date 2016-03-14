@@ -1,14 +1,99 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/austindizzy/prtstatus-go/prt"
+	"github.com/spf13/viper"
+	"gopkg.in/macaron.v1"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 )
 
 type Response map[string]interface{}
+
+func pbUserAuth(ctx *macaron.Context) {
+	if ctx.Query("error") == "access_denied" {
+		ctx.Data["Error"] = "access_denied"
+		ctx.HTML(200, "pushbullet")
+		return
+	}
+
+	if ctx.Query("s") == "auth_step" {
+		var (
+			data = url.Values{
+				"grant_type":    {"authorization_code"},
+				"client_id":     {viper.GetString("pushbullet.client_id")},
+				"client_secret": {viper.GetString("pushbullet.client_secret")},
+				"code":          {ctx.Query("code")},
+			}
+			resp, err = http.PostForm("https://api.pushbullet.com/oauth2/token", data)
+			body      []byte
+			pbResp    map[string]string
+		)
+
+		if err != nil || resp.StatusCode != http.StatusOK {
+			log(err, ctx.Data)
+			ctx.Data["Error"] = "gen_error"
+			ctx.HTML(500, "pushbullet")
+			return
+		}
+
+		defer resp.Body.Close()
+		body, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log(err)
+			ctx.Data["Error"] = "gen_error"
+			ctx.HTML(500, "pushbullet")
+			return
+		}
+
+		err = json.Unmarshal(body, &pbResp)
+
+		if len(pbResp["access_token"]) > 0 {
+			u := NewUser(pbResp["access_token"], "pushbullet")
+			err = storeUser(u)
+			if err != nil {
+				log(err)
+				ctx.Data["Error"] = "gen_error"
+				ctx.HTML(500, "pushbullet")
+				return
+			}
+
+			lastStatus, err := getLastStatus()
+			if err == nil {
+				err = u.send(&lastStatus)
+				if err == nil {
+					ctx.Data["Error"] = "no_send_err"
+				}
+			}
+		} else {
+			ctx.Data["Error"] = "gen_error"
+			ctx.HTML(200, "pushbullet")
+		}
+
+		ctx.HTML(200, "pushbullet")
+		return
+	}
+
+	pushbulletUrl, _ := url.Parse("https://www.pushbullet.com/authorize")
+	pushbulletQ := pushbulletUrl.Query()
+	pushbulletQ.Add("client_id", viper.GetString("pushbullet.client_id"))
+	pushbulletQ.Add("response_type", "code")
+
+	callbackUrl, _ := url.Parse(viper.GetString("pushbullet.redirect_uri"))
+	callbackQ := callbackUrl.Query()
+	callbackQ.Add("s", "auth_step")
+	callbackUrl.RawQuery = callbackQ.Encode()
+	pushbulletQ.Add("redirect_uri", callbackUrl.String())
+
+	pushbulletUrl.RawQuery = pushbulletQ.Encode()
+
+	ctx.Redirect(pushbulletUrl.String())
+}
 
 func userHandler(r *http.Request) Response {
 	var (
