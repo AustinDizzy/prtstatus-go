@@ -17,7 +17,7 @@ func NewUser(opts ...string) *User {
 		u.Key = opts[0]
 	}
 	if len(opts) >= 2 {
-		u.Device = opts[0]
+		u.Device = opts[1]
 	}
 	return u
 }
@@ -61,16 +61,34 @@ func getUsers(device ...string) ([]User, error) {
 	return users, err
 }
 
-func getUserIDs(users []User) []string {
+func getUserIDs(users []User, device ...string) []string {
 	s := []string{}
 	for _, u := range users {
-		s = append(s, u.Key)
+		if len(device) >= 1 {
+			if u.Device == device[0] {
+				s = append(s, u.Key)
+			}
+		} else {
+			s = append(s, u.Key)
+		}
 	}
 	return s
 }
 
 func (u User) send(data *prt.Status) error {
-	return sendToUser(data, u)
+	var (
+		err error
+		p   = NewPush(data, u)
+	)
+
+	switch u.Device {
+	case "android":
+		err = p.ToAndroid()
+	case "pushbullet":
+		err = p.ToPushbullet()
+	}
+
+	return err
 }
 
 func (u *User) delete() error {
