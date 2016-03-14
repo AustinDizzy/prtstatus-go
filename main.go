@@ -20,19 +20,18 @@ func init() {
 	viper.SetDefault("refreshInterval", "15s")
 	viper.SetDefault("port", ":8000")
 	log(viper.ReadInConfig())
+
+	initDatabase(viper.GetString("postgres.user"), viper.GetString("postgres.db"))
 }
 
 func main() {
 	logpkg.Println("Starting server...")
-	duration, _ = time.ParseDuration(viper.GetString("refreshInterval"))
-
 	var (
-		ticker = time.NewTicker(duration)
-		quit   = make(chan struct{})
-		m      = macaron.Classic()
+		duration, _ = time.ParseDuration(viper.GetString("refreshInterval"))
+		ticker      = time.NewTicker(duration)
+		quit        = make(chan struct{})
+		m           = macaron.Classic()
 	)
-
-	initDatabase(viper.GetString("postgres.user"), viper.GetString("postgres.db"))
 
 	go func() {
 		for {
@@ -46,13 +45,16 @@ func main() {
 		}
 	}()
 
+	m.Use(macaron.Renderer(macaron.RenderOptions{
+		Directory: "views",
+		Layout:    "layout",
+	}))
 	m.Post("/user", APIMiddleware(userHandler))
 	m.Get("/api/data", APIMiddleware(dataAPI))
+	m.Get("/", indexHandler)
+	m.Get("/data", dataHandler)
+	m.Combo("/pb_auth").Get(pbUserAuth).Post(pbUserAuth)
 	m.Use(macaron.Static("static"))
-	// router.HandleFunc("/auth", AuthHandler).Methods("GET")
-	// router.HandleFunc("/store", CallbackHandler)
-	// router.HandleFunc("/api", ApiRoot)
-	// router.HandleFunc("/api/", ApiRoot)
 	m.Run(viper.GetInt("port"))
 }
 

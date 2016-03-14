@@ -14,10 +14,27 @@ header .jumbotron {
 	background-image: url('//i.imgur.com/ntbHN5E.png');
 	background-size: cover;
 	background-position-y: 25%;
+    margin-bottom: 0;
+    border-radius: 0;
 }
 
-article {
-	padding-bottom: 45px;
+#content {
+    margin-top: 4rem;
+}
+
+#nav .navbar {
+    border-radius: 0;
+}
+
+.sticky {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+}
+.sticky:before,
+.sticky:after {
+    content: '';
+    display: table;
 }
 
 .carousel-control {
@@ -36,6 +53,7 @@ article {
 
 div.col-md-6 ul {
 	font-family: 'Open Sans';
+    font-size: 14px;
 }
 
 footer {
@@ -66,11 +84,9 @@ footer .col-md-3:nth-child(even) {
 }
 
 .btn-git {
-	padding: 9px 22px;
-	font-size: 14px;
-	width: 172px;
+	font-size: 14px !important;
+	width: 175px;
 	white-space: normal;
-	border-radius: 4px;
 }
 
 #glassbutton:hover {

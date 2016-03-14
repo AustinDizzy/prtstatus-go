@@ -34,6 +34,14 @@ func userHandler(r *http.Request) Response {
 	return Response{"success": true}
 }
 
+func indexHandler(ctx *macaron.Context) {
+	ctx.HTML(200, "index")
+}
+
+func dataHandler(ctx *macaron.Context) {
+	ctx.HTML(200, "data")
+}
+
 func dataAPI(r *http.Request) Response {
 	var (
 		err       error
