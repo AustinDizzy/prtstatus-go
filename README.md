@@ -1,4 +1,5 @@
 PRT Status server (with Go)
+[![Build Status](https://travis-ci.org/AustinDizzy/prtstatus-go.svg)](https://travis-ci.org/AustinDizzy/prtstatus-go) [![GoDoc](https://godoc.org/github.com/AustinDizzy/prtstatus-go?status.svg)](https://godoc.org/github.com/AustinDizzy/prtstatus-go/prt)
 =====
 
 This repository hosts the server code for the WVU PRT Status server (https://prtstat.us). The project is currently hosted on Google App Engine (https://wvuprtstatus-ec646.appspot.com/) and works well within Google's generous free tier.
