@@ -1,0 +1,243 @@
+<html lang="en">
+<head>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-115076987-1"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'UA-115076987-1');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>WVU PRT Status</title>
+
+    <link rel="stylesheet" href="//unpkg.com/purecss@1.0.0/build/pure-min.css" integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous">
+    <!--[if lte IE 8]>
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/grids-responsive-min.css">
+    <!--<![endif]-->
+    <style type="text/css">
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            background-color: #eee;
+        }
+
+        small {
+            font-size: 65%;
+        }
+
+        .hr-cont {
+            width: 65%;
+            text-align: center;
+            border-bottom: 1px solid #d7d4f0;
+            line-height: 0.1em;
+            margin: 1.65em auto;
+        }
+
+        .hr-cont span {
+            background: #fff;
+            padding: 0 10px;
+        }
+
+        li {
+            margin: 1.25em 0;
+        }
+
+        #main-container {
+            margin-bottom: 1.25rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+        }
+
+        @media screen and (max-width: 767px) {
+            .pure-sm-hidden {
+                display: none;
+            }
+        }
+
+        @media screen and (min-width: 768px) {
+            .pure-md-hidden { 
+                display: none;
+            }
+            #main-container {
+                margin-top: 1.8em;
+            }
+        }
+
+        #status img {
+            max-width: 5.68em;
+            width: auto;
+            margin: 2.8em 0;
+        }
+
+        #status {
+            min-height: 30vh;
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+            text-align: center;
+            padding-bottom: 2.8em;
+        }
+
+        .status-up {
+            background-color: forestgreen;
+        }
+
+        .status-down {
+            background-color: firebrick;
+        }
+
+        #status-text {
+            color: white;
+            font-size: 1.2em;
+            line-height: 1.7;
+            padding: 0 0.2em 2.8em 0.2em;
+        }
+
+        #app-card {
+            background: #fff;
+            padding: 2.25em;
+        }
+
+        #app-card div {
+            text-align: center;
+        }
+
+        #footer {
+            min-height: 15vh;
+            background: #333;
+            color: #666;
+            text-align: center;
+            line-height:1.5em;
+            padding:0.5em 1.5em 0 1.5em;
+            border-bottom-left-radius: 4px;
+            border-bottom-right-radius: 4px;
+        }
+        #footer a {
+            color: inherit;
+        }
+        #credits-text {
+            text-align: center;
+            padding-bottom: 1em;
+        }
+        #credits-text a {
+            text-decoration: none;
+            color: #333;
+            border-bottom: 1px dotted #333;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="pure-u-1-1 pure-u-md-1-5 pure-u-lg-1-3"></div>
+    <div id="main-container" class="pure-u-1-1 pure-u-md-3-5 pure-u-lg-1-3">
+        <div id="status">
+            <img src="/running.png" hidden>
+            <img src="/down.png">
+            <br>
+            <span id="status-text">The PRT is currently running on a normal schedule.
+                <br>
+                <small>Last Updated X ago</small>
+            </span>
+        </div>
+        <div id="app-card" class="pure-g">
+            <h3 class="pure-u-1-1">Sign-Up for PRT Outage Notifications</h3>
+            <div class="pure-u-1-5 pure-md-hidden"></div>
+            <div id="app-text" class="pure-u-1-1 pure-u-md-2-3">
+                <ul>
+                    <li>Get notified as soon as the PRT goes down, for all stations or only the ones you care about.</li>
+                    <li>Know about closing or delays often before they're ever announced at stations.</li>
+                    <li>Fully compatible with Android Wear and other smartwatches</li>
+                </ul>
+                <a href="https://play.google.com/store/apps/details?id=me.austindizzy.wvuprtstatus.app" target="_blank">
+                    <img src="/google-play-badge.png" width="175">
+                </a>
+                <div class="hr-cont">
+                    <span>OR</span>
+                </div>
+                <a class="pure-button" href="https://pushbullet.com/channel-popup?tag=wvuprtstatus" target="_blank" style="margin-bottom: 1.75em;">
+                    Follow on
+                    <img src="data:image/png;base64,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"
+                        style="vertical-align: middle;">
+                    <b>Pushbullet</b>
+                </a>
+            </div>
+            <div id="app-img" class="pure-u-3-5 pure-u-md-1-3">
+                    <img src="/app_promo_sm.png" class="pure-img pure-sm-hidden">
+                    <img src="/app_promo_lg.png" class="pure-img pure-md-hidden">
+            </div>
+            <div class="pure-u-1-1" style="text-align: center;">
+                <div>Don't have an Android phone? You're not left out!
+                    <a href="https://pushbullet.com">Pushbullet</a> is a popular notification and device sync app with clients available on iOS, Android,
+                    Blackberry, Windows Desktop/Mobile, and more. Install the app, then come back here and Follow the channel
+                    using the above button.
+                    <br><br>Native iOS client coming soon.</div>
+            </div>
+        </div>
+        <div id="footer">
+            <p>Made by the hands of a proud Mountaineer.
+                <br>Google Play and the Google Play logo are trademarks of Google LLC.</p>
+            <a href="https://github.com/austindizzy/prtstatus-go">View on GitHub</a> |
+            <a href="https://github.com/austindizzy/prtstatus-go/issues">Report an Issue</a>
+        </div>
+    </div>
+    <div class="pure-u-1-1" id="credits-text">
+        <a href="https://abs.ec">abs</a>
+    </div>
+    <script type="text/javascript">
+        window.onresize = function() {
+            if (this.innerWidth < 768) {
+                document.getElementById("app-img").after(document.getElementById("app-text"))
+            } else {
+                document.getElementById("app-text").after(document.getElementById("app-img"));
+            }
+        };
+        window.onload = window.onresize;
+        function timeAgo(previous) {
+            previous = Number(previous) * 1000;
+            var msPerMinute = 60 * 1000;
+            var msPerHour = msPerMinute * 60;
+            var msPerDay = msPerHour * 24;
+            var msPerMonth = msPerDay * 30;
+            var msPerYear = msPerDay * 365;
+
+            var elapsed = new Date().getTime() - previous;
+
+            if (elapsed < msPerMinute) {
+                return Math.round(elapsed / 1000) + ' Seconds Ago';
+            } else if (elapsed < msPerHour) {
+                return Math.round(elapsed / msPerMinute) + ' Minutes Ago';
+            } else if (elapsed < msPerDay) {
+                return Math.round(elapsed / msPerHour) + ' Hours Ago';
+            } else if (elapsed < msPerMonth) {
+                return Math.round(elapsed / msPerDay) + ' Days Ago';
+            } else if (elapsed < msPerYear) {
+                return Math.round(elapsed / msPerMonth) + ' Months Ago';
+            } else {
+                return Math.round(elapsed / msPerYear) + ' Years Ago';
+            }
+        }
+        var req = new XMLHttpRequest();
+        req.onreadystatechange = function () {
+            if (req.readyState == 4 && req.status == 200) {
+                var data = JSON.parse(req.responseText), txt = document.getElementById("status-text");
+                document.getElementById("status").classList.add(data["status"] == "1" ? "status-up" : "status-down");
+                if (data["status"] == "1") {
+                    document.querySelector("#status img[src='/running.png']").removeAttribute("hidden");
+                    document.querySelector("#status img[src='/down.png']").remove();
+                }
+                document.title += " | PRT is " + (data["status"] == 1 ? "UP" : (data["status"] == 7 ? "CLOSED" : "DOWN"));
+                txt.firstChild.textContent = data["message"];
+                txt.getElementsByTagName("small")[0].textContent = "Last Updated " + timeAgo(data["timestamp"]);
+            };
+        };
+        req.open("GET", location.origin + "/api/status", true);
+        req.send();
+    </script>
+</body>
+
+</html>

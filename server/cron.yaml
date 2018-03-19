@@ -1,0 +1,5 @@
+cron:
+- description: polling prt status
+  url: /api/poll
+  schedule: every 1 minutes synchronized
+  timezone: US/Eastern

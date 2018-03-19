@@ -1,0 +1,18 @@
+sudo: required
+
+services:
+ - docker
+
+language: go
+
+deploy:
+ provider: gae
+ project: wvuprtstatus-ec646
+ keyfile: gae-key.json
+ verbosity: debug
+ config: server/app.yaml
+ on: master
+
+before_install:
+- openssl aes-256-cbc -K $encrypted_1cc7a1a94640_key -iv $encrypted_1cc7a1a94640_iv
+  -in gae-key.json.enc -out gae-key.json -d

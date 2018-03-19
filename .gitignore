@@ -1,7 +1,2 @@
-config.json
-config.yml
-prtstatus*
-log/
-pid/
-*.swp
-*.exe
+config.yaml
+*.json
