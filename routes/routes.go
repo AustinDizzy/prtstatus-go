@@ -1,15 +1,20 @@
 package routes
 
 import (
+	"io/ioutil"
 	"net/http"
+	"os"
+	"path"
 	"strings"
 
+	"cloud.google.com/go/storage"
 	"github.com/AustinDizzy/prtstatus-go/prt"
 	"github.com/AustinDizzy/prtstatus-go/user"
 	"github.com/AustinDizzy/prtstatus-go/utils"
 	"github.com/qedus/nds"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/file"
 	"google.golang.org/appengine/log"
 	"google.golang.org/appengine/urlfetch"
 )
@@ -146,4 +151,40 @@ func LastStatus(w http.ResponseWriter, r *http.Request) {
 		log.Errorf(c, "%s", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
+}
+
+func GetLinks(w http.ResponseWriter, r *http.Request) {
+	var (
+		linksFile []byte
+		err       error
+		c         = appengine.NewContext(r)
+	)
+	if appengine.IsDevAppServer() {
+		linksFile, err = ioutil.ReadFile(path.Join(os.Getenv("PWD"), "links.json"))
+		if err != nil {
+			log.Errorf(c, "%s", err)
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+	} else {
+		storageClient, err := storage.NewClient(c)
+		if err != nil {
+			log.Errorf(c, "%s", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		bucket, _ := file.DefaultBucketName(c)
+		rc, err := storageClient.Bucket(bucket).Object("links.json").NewReader(c)
+		if err != nil {
+			log.Errorf(c, "error reading links: %v", err.Error())
+		}
+
+		defer rc.Close()
+		if linksFile, err = ioutil.ReadAll(rc); err != nil {
+			log.Errorf(c, "%s", err)
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(linksFile)
 }
