@@ -186,8 +186,8 @@ func GetStatus(w http.ResponseWriter, r *http.Request) {
 		num = 25
 	}
 	if num > 1 {
-		_, err = q.Limit(num).GetAll(c, &statuses)
-		data = statuses
+		_, err = q.Limit(num+1).GetAll(c, &statuses)
+		data = statuses[1:]
 	} else {
 		status, err = utils.GetCurrentStatus(c)
 		if err != nil {
