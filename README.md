@@ -2,7 +2,7 @@ PRT Status server (with Go)
 [![Build Status](https://travis-ci.org/AustinDizzy/prtstatus-go.svg)](https://travis-ci.org/AustinDizzy/prtstatus-go) [![GoDoc](https://godoc.org/github.com/AustinDizzy/prtstatus-go?status.svg)](https://godoc.org/github.com/AustinDizzy/prtstatus-go/prt)
 =====
 
-This repository hosts the server code for the WVU PRT Status server (https://prtstat.us). The project is currently hosted on Google App Engine (https://wvuprtstatus-ec646.appspot.com/) and works well within Google's generous free tier.
+This repository hosts the server code for the WVU PRT Status (https://prtstat.us) project. The server is currently hosted on Google App Engine (https://wvuprtstatus-ec646.appspot.com/) and works well within Google's generous free tier.
 
 The repository also has [a Go library](/prt/) for interacting with WVU's PRT Status API (which is just a simple net/http wrapper with custom types and other utility functions). See [GoDoc](https://godoc.org/github.com/AustinDizzy/prtstatus-go/prt) for more info.
 
@@ -15,6 +15,7 @@ This project is built with many different technologies, including (but not limit
  - [Pure.css](https://purecss.io) - a minimal response CSS web framework by Yahoo
  - [Firebase Cloud Messaging](https://firebase.google.com/products/cloud-messaging/) - a realtime client messaging product by Google
  - [Pushbullet](https://pushbullet.com) - a notification sync service, being used to provide a [public notification channel](https://www.pushbullet.com/channel-popup?tag=wvuprtstatus) so iOS users can receive notifications
+ - [Weather Underground](https://www.wunderground.com/) - Weather Underground's free API is used to collect weather information from the [weather station installed on the Brooks Hall green roof](https://www.wunderground.com/personal-weather-station/dashboard?ID=KWVMORGA25).
 
 
  #### Contributing
