@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 
 	"cloud.google.com/go/storage"
@@ -57,33 +58,50 @@ var downStatus = prt.Status{
 	Stations: []string{"All"},
 }
 
-func Poll(w http.ResponseWriter, r *http.Request) {
-	c := appengine.NewContext(r)
+func PollWeather(w http.ResponseWriter, r *http.Request) {
 	var (
-		key              = datastore.NewKey(c, "updates", "current", 0, nil)
-		lastStatus       = new(prt.Status)
-		urlClient        = urlfetch.Client(c)
-		prtClient        = prt.NewClient(urlClient)
-		status, str, err = prtClient.GetCurrentStatus()
-		forceType        = r.URL.Query().Get("force_type")
-		noNotif          = r.URL.Query().Get("no_notif")
+		c            = appengine.NewContext(r)
+		key          = datastore.NewKey(c, "weather", "current", 0, nil)
+		weather, err = utils.RetrieveWeather(c)
 	)
+	if err != nil {
+		log.Errorf(c, "RetrieveWeather: %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	key, err = nds.Put(c, key, weather)
+	if err != nil {
+		log.Errorf(c, "StoreWeather: %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func PollStatus(w http.ResponseWriter, r *http.Request) {
+	var (
+		c         = appengine.NewContext(r)
+		urlClient = urlfetch.Client(c)
+		prtClient = prt.NewClient(urlClient)
+		forceType = r.URL.Query().Get("force_type")
+		noNotif   = r.URL.Query().Get("no_notif")
+	)
+
+	status, str, err := prtClient.GetCurrentStatus()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	err = nds.Get(c, key, lastStatus)
-	if err == datastore.ErrNoSuchEntity {
+
+	lastStatus, err := utils.GetCurrentStatus(c)
+	switch err {
+	case datastore.ErrNoSuchEntity:
 		err = utils.StoreNewStatus(c, status)
 		if err != nil {
-			log.Errorf(c, "%s", err)
+			log.Errorf(c, "StoreNewStatus: %s", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-	} else if err != nil {
-		log.Errorf(c, err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-	} else if err == nil {
+		break
+	case nil:
 		if len(forceType) > 0 {
 			if forceType == "-1" {
 				status = &downStatus
@@ -94,23 +112,37 @@ func Poll(w http.ResponseWriter, r *http.Request) {
 			}
 			status.Timestamp = lastStatus.Timestamp + 142
 		}
-		switch lastStatus.CompareTo(status) {
-		case 1:
+
+		i := lastStatus.CompareTo(status)
+		if i == 1 {
 			log.Infof(c, "updates maybe stale? current status came before last status: %#v | %#v", lastStatus, status)
 			break
-		case -1:
+		} else if i == -1 {
 			log.Infof(c, str)
 			err = utils.StoreNewStatus(c, status)
 			if err != nil {
-				log.Errorf(c, "%s", err)
+				log.Errorf(c, "StoreNewStatus: %s", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			weather, err := utils.GetCurrentWeather(c)
+			if err != nil {
+				log.Errorf(c, "GetCurrentWeather: %s", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			if err = weather.Save(c, status.Timestamp); err != nil {
+				log.Errorf(c, "weather.Save: %s", err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
 			if !strings.Contains(noNotif, "fcm") {
-				rsp, err := utils.NotifyFCM(c, status)
+				rsp, err := utils.NotifyFCM(c, status, weather)
 				if err != nil {
-					log.Errorf(c, "%s", err)
+					log.Errorf(c, "NotifyFCM: %s", err)
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
@@ -120,35 +152,66 @@ func Poll(w http.ResponseWriter, r *http.Request) {
 			if !strings.Contains(noNotif, "pb") {
 				err = utils.NotifyPushbullet(c, status)
 				if err != nil {
-					log.Errorf(c, "error pushing to pushbullet: %s", err)
+					log.Errorf(c, "NotifyPushbullet: %s", err)
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
 			}
-			break
-		case 0:
-			// do nothing because statuses are same
 		}
-	} else {
-		log.Errorf(c, "%s", err)
+		break
+	default:
+		log.Errorf(c, err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
-func LastStatus(w http.ResponseWriter, r *http.Request) {
+func GetStatus(w http.ResponseWriter, r *http.Request) {
 	var (
-		c          = appengine.NewContext(r)
-		key        = datastore.NewKey(c, "updates", "current", 0, nil)
-		lastStatus prt.Status
-		err        = nds.Get(c, key, &lastStatus)
+		c        = appengine.NewContext(r)
+		limit    = r.URL.Query().Get("limit")
+		num, err = strconv.Atoi(limit)
+		q        = datastore.NewQuery("updates").Order("-__key__")
+		data     interface{}
+		status   *prt.Status
+		statuses []prt.Status
+	)
+	if len(limit) > 0 && err != nil {
+		log.Errorf(c, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	if num < 0 {
+		num *= 1
+	}
+	if num > 25 {
+		num = 25
+	}
+	if num > 1 {
+		_, err = q.Limit(num).GetAll(c, &statuses)
+		data = statuses
+	} else {
+		status, err = utils.GetCurrentStatus(c)
+		if err != nil {
+			log.Errorf(c, err.Error())
+		}
+		data = status
+	}
+
+	if err = utils.WriteJSON(w, data); err != nil {
+		log.Errorf(c, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func GetWeather(w http.ResponseWriter, r *http.Request) {
+	var (
+		c            = appengine.NewContext(r)
+		weather, err = utils.GetCurrentWeather(c)
 	)
 	if err != nil {
-		log.Errorf(c, "%s", err)
+		log.Errorf(c, err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if err = utils.WriteJSON(w, lastStatus); err != nil {
-		log.Errorf(c, "%s", err)
+	} else if err = utils.WriteJSON(w, weather); err != nil {
+		log.Errorf(c, err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
@@ -162,13 +225,13 @@ func GetLinks(w http.ResponseWriter, r *http.Request) {
 	if appengine.IsDevAppServer() {
 		linksFile, err = ioutil.ReadFile(path.Join(os.Getenv("PWD"), "links.json"))
 		if err != nil {
-			log.Errorf(c, "%s", err)
+			log.Errorf(c, err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	} else {
 		storageClient, err := storage.NewClient(c)
 		if err != nil {
-			log.Errorf(c, "%s", err)
+			log.Errorf(c, err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -180,7 +243,7 @@ func GetLinks(w http.ResponseWriter, r *http.Request) {
 
 		defer rc.Close()
 		if linksFile, err = ioutil.ReadAll(rc); err != nil {
-			log.Errorf(c, "%s", err)
+			log.Errorf(c, err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	}

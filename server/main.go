@@ -9,9 +9,11 @@ import (
 
 func init() {
 	http.HandleFunc("/api/user", routes.User)
-	http.HandleFunc("/api/status", routes.LastStatus)
+	http.HandleFunc("/api/status", routes.GetStatus)
 	http.HandleFunc("/api/links", routes.GetLinks)
-	http.HandleFunc("/api/poll", routes.Poll)
+	http.HandleFunc("/api/weather", routes.GetWeather)
+	http.HandleFunc("/api/poll/status", routes.PollStatus)
+	http.HandleFunc("/api/poll/weather", routes.PollWeather)
 	http.Handle("/", http.FileServer(http.Dir("static")))
 }
 
