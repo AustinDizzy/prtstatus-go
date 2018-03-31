@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"gopkg.in/maddevsio/fcm.v1"
 
@@ -57,11 +58,13 @@ func RetrieveWeather(c context.Context) (*Weather, error) {
 	var (
 		data      map[string]interface{}
 		resp      *http.Response
-		cfg, err  = config.Load(c)
-		urlClient = urlfetch.Client(c)
+		ctx, cncl = context.WithTimeout(c, 90*time.Second)
+		cfg, err  = config.Load(ctx)
+		urlClient = urlfetch.Client(ctx)
 		url       = fmt.Sprintf(wuAPI, cfg["wuKey"])
 		weather   = new(Weather)
 	)
+	defer cncl()
 	if err != nil {
 		return weather, err
 	}
