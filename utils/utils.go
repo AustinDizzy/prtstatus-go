@@ -58,7 +58,7 @@ func RetrieveWeather(c context.Context) (*Weather, error) {
 	var (
 		data      map[string]interface{}
 		resp      *http.Response
-		ctx, cncl = context.WithTimeout(c, 90*time.Second)
+		ctx, cncl = context.WithTimeout(c, 3*60*time.Second)
 		cfg, err  = config.Load(ctx)
 		urlClient = urlfetch.Client(ctx)
 		url       = fmt.Sprintf(wuAPI, cfg["wuKey"])
