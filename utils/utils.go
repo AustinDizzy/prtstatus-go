@@ -83,31 +83,52 @@ func RetrieveWeather(c context.Context) (*Weather, error) {
 	}
 
 	data = data["current_observation"].(map[string]interface{})
+
 	weather.Temperature = float32(data["temp_f"].(float64))
-	humidity, err := strconv.ParseFloat(strings.TrimRight(data["relative_humidity"].(string), "%"), 32)
-	if err != nil {
-		return weather, err
+
+	if s := data["relative_humidity"].(string); len(s) > 0 {
+		humidity, err := strconv.ParseFloat(strings.TrimRight(s, "%"), 32)
+		if err != nil {
+			return weather, err
+		}
+		weather.Humidity = float32(humidity)
 	}
-	weather.Humidity = float32(humidity)
+
 	weather.Weather = data["icon"].(string)
 	weather.Conditions = data["weather"].(string)
-	feelsLike, err := strconv.ParseFloat(data["feelslike_f"].(string), 32)
-	if err != nil {
-		return weather, err
+
+	if s := data["feelslike_f"].(string); len(s) > 0 {
+		feelsLike, err := strconv.ParseFloat(s, 32)
+		if err != nil {
+			return weather, err
+		}
+		weather.FeelsLike = float32(feelsLike)
 	}
-	weather.FeelsLike = float32(feelsLike)
-	precip1hr, err := strconv.ParseFloat(data["precip_1hr_in"].(string), 32)
-	if err != nil {
-		return weather, err
+
+	if s := data["precip_1hr_in"].(string); len(s) > 0 {
+		precip1hr, err := strconv.ParseFloat(s, 32)
+		if err != nil {
+			return weather, err
+		}
+		weather.Precip1hr = float32(precip1hr)
 	}
-	weather.Precip1hr = float32(precip1hr)
-	precipToday, err := strconv.ParseFloat(data["precip_today_in"].(string), 32)
-	if err != nil {
-		return weather, err
+
+	if s := data["precip_today_in"].(string); len(s) > 0 {
+		precipToday, err := strconv.ParseFloat(data["precip_today_in"].(string), 32)
+		if err != nil {
+			return weather, err
+		}
+		weather.PrecipToday = float32(precipToday)
 	}
-	weather.PrecipToday = float32(precipToday)
-	visibility, err := strconv.ParseFloat(data["visibility_km"].(string), 32)
-	weather.Visibility = float32(visibility)
+
+	if s := data["visibility_km"].(string); len(s) > 0 {
+		visibility, err := strconv.ParseFloat(s, 32)
+		if err != nil {
+			return weather, err
+		}
+		weather.Visibility = float32(visibility)
+	}
+
 	weather.WindDir = data["wind_dir"].(string)
 	weather.WindSpeed = float32(data["wind_mph"].(float64))
 
