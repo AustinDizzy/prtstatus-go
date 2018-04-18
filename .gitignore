@@ -1,2 +1,3 @@
 config.yaml
 *.json
+!links.json
