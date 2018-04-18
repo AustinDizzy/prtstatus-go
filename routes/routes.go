@@ -7,6 +7,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/AustinDizzy/prtstatus-go/prt"
@@ -31,6 +32,7 @@ func User(w http.ResponseWriter, r *http.Request) {
 	if err == datastore.ErrNoSuchEntity {
 		u.Token = r.FormValue("regID")
 		u.Device = "android"
+		u.RegistrationDate = time.Now()
 		log.Infof(c, "User-Agent is: %s", r.Header.Get("User-Agent"))
 		k, err = datastore.Put(c, k, u)
 	}
