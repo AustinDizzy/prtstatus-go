@@ -29,6 +29,7 @@ var downStatus = prt.Status{
 	Stations: []string{"All"},
 }
 
+// PollWeather polls for weather condition updates and stores any new records
 func PollWeather(w http.ResponseWriter, r *http.Request) {
 	var (
 		c            = appengine.NewContext(r)
@@ -47,6 +48,7 @@ func PollWeather(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// PollStatus polls for PRT status updates and stores any new records
 func PollStatus(w http.ResponseWriter, r *http.Request) {
 	var (
 		c         = appengine.NewContext(r)

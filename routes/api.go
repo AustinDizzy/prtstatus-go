@@ -13,6 +13,7 @@ import (
 	"google.golang.org/appengine/log"
 )
 
+// User is route to query or create new User
 func User(w http.ResponseWriter, r *http.Request) {
 	var (
 		c    = appengine.NewContext(r)
@@ -36,6 +37,7 @@ func User(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetStatus is route for returning a status or a list of statuses
 func GetStatus(w http.ResponseWriter, r *http.Request) {
 	var (
 		c        = appengine.NewContext(r)
@@ -73,6 +75,7 @@ func GetStatus(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetWeather is route for returning current weather conditions
 func GetWeather(w http.ResponseWriter, r *http.Request) {
 	var (
 		c            = appengine.NewContext(r)
