@@ -10,7 +10,7 @@ deploy:
  project: wvuprtstatus-ec646
  keyfile: gae-key.json
  verbosity: debug
- config: server/app.yaml
+ config: server/app.yaml server/cron.yaml server/index.yaml
  on: master
 
 before_install:
