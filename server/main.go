@@ -10,7 +10,6 @@ import (
 func init() {
 	http.HandleFunc("/api/user", routes.User)
 	http.HandleFunc("/api/status", routes.GetStatus)
-	http.HandleFunc("/api/links", routes.GetLinks)
 	http.HandleFunc("/api/weather", routes.GetWeather)
 	http.HandleFunc("/api/poll/status", routes.PollStatus)
 	http.HandleFunc("/api/poll/weather", routes.PollWeather)
