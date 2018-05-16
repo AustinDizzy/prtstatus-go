@@ -69,7 +69,7 @@ li {
 }
 
 #status-text {
-    color: white;
+    color: #fff;
     font-size: 1.2em;
     line-height: 1.7;
     padding: 0 0.2em 2.8em 0.2em;
@@ -105,4 +105,14 @@ li {
     text-decoration: none;
     color: #333;
     border-bottom: 1px dotted #333;
+}
+
+.pure-alert {
+    background: firebrick;
+    color: #fff;
+    padding: 0.42rem;
+}
+.pure-alert a {
+    text-decoration: none;
+    color: #3caef2;
 }
