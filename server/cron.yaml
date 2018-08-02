@@ -1,8 +1,8 @@
 cron:
-# - description: polling prt status
-#   url: /api/poll/status
-#   schedule: every 1 minutes synchronized
-#   timezone: US/Eastern
+- description: polling prt status
+  url: /api/poll/status
+  schedule: every 1 minutes synchronized
+  timezone: US/Eastern
 - description: polling current weather
   url: /api/poll/weather
   schedule: every 3 minutes synchronized
