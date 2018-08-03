@@ -13,7 +13,6 @@ deploy:
  config:
   - "server/app.yaml"
   - "server/cron.yaml"
-  - "server/index.yaml"
  on: master
  edge:
   source: AustinDizzy/dpl
